@@ -1,5 +1,4 @@
 'use strict';
-
 /*
  The Brain is the core decision source when reacting to server requests that need to implement decent choosing logic (card, trumpf or schiäbä).
  This implementation basically responds with either default behaviour or random valid cards.
@@ -8,130 +7,103 @@
 let Validation = require('../shared/validation/validation');
 let Card = require('./../shared/deck/card');
 
-// 6
-// 7
-// 8
-// 9
-// 10
-// 11 bube
-// 12 dame
-// 13 könig
-// 14 ass
-
-// Handcards:
-// [ { number: 6, color: 'DIAMONDS' },
-//   { number: 6, color: 'HEARTS' },
-//   { number: 11, color: 'DIAMONDS' },
-//   { number: 11, color: 'SPADES' },
-//   { number: 8, color: 'HEARTS' },
-//   { number: 6, color: 'SPADES' },
-//   { number: 10, color: 'HEARTS' },
-//   { number: 9, color: 'DIAMONDS' },
-//   { number: 7, color: 'HEARTS' } ]
-
 let GameTypes = [
-    { name: 'trumpfHearts', color: 'HEARTS', mode: 'TRUMPF' },
-    { name: 'trumpfDiamonds', color: 'DIAMONDS', mode: 'TRUMPF' },
-    { name: 'trumpfClubs', color: 'CLUBS', mode: 'TRUMPF' },
-    { name: 'trumpfSpades', color: 'SPADES', mode: 'TRUMPF' },
-    { name: 'obeabe', color: 'HEARTS', mode: 'OBEABE' },
-    { name: 'undeufe', color: 'HEARTS', mode: 'UNDEUFE' }  
+    { label: 'trumpfHearts', color: 'HEARTS', mode: 'TRUMPF' },
+    { label: 'trumpfDiamonds', color: 'DIAMONDS', mode: 'TRUMPF' },
+    { label: 'trumpfClubs', color: 'CLUBS', mode: 'TRUMPF' },
+    { label: 'trumpfSpades', color: 'SPADES', mode: 'TRUMPF' },
+    { label: 'obeabe', color: 'HEARTS', mode: 'OBEABE' },
+    { label: 'undeufe', color: 'HEARTS', mode: 'UNDEUFE' }  
 ];
+
+// TODO: Evaluierungsstatistik mitführen
+let CurrentDeckWeights = {};
+let CurrentColorWeights = { color: '', count: 0, trumpfWeight: 0 };
+
+// Effektive Kartenwerte beim Auszählen am Ende
+let TrumpfValues =    [0,0,0,0,0,0, 0, 0, 0,14,10,20, 3, 4,11]; // Kartenwert für Trumpf
+let NotTrumpfValues = [0,0,0,0,0,0, 0, 0, 0, 0,10, 2, 3, 4,11]; // Kartenwert für Nicht-Trumpf
+let ObeabeValues =    [0,0,0,0,0,0, 0, 0, 8, 0,10, 2, 3, 4,11]; // Kartenwert bei Obeabe
+let UndeufeValues =   [0,0,0,0,0,0,11, 0, 8, 0,10, 2, 3, 4, 0]; // Kartenwert bei Undeufe
+
+// Gewichtete Kartenwerte beim Auszählen am Ende (zurzeit "willkürlich" gewichtet)
+let TrumpfWeights =    [0,0,0,0,0,0, 1, 1, 1, 8, 2,13, 2, 4, 6]; // Kartenwert für Trumpf
+let NotTrumpfWeights = [0,0,0,0,0,0, 1, 1, 1, 1, 2, 4, 6, 9,13]; // Kartenwert für Nicht-Trumpf
+let ObeabeWeights =    [0,0,0,0,0,0, 1, 1, 1, 1, 2, 3, 4, 9,16]; // Kartenwert bei Obeabe
+let UndeufeWeights =   [0,0,0,0,0,0,16, 9, 4, 3, 2, 1, 1, 1, 1]; // Kartenwert bei Undeufe
 
 let Brain = {
     geschoben: false,
+    // Retourniert (boolean), ob die :card im :gameType ein Trumpf ist.
+    _isTrumpf: function(card, gameType) {
+        return (gameType.mode === 'TRUMPF') ? (card.color === gameType.color) : false;
+    },
+    // Retoruniert den Wert der :card im :gameType bei der Auszählung am Ende
     _mapCardToValue: function(card, gameType) {
-        switch(card.number) {
-            case 6: // 6
-                return (gameType.mode === 'UNDEUFE') ? 11 : 0;
-                break;
-            case 7: // 7
-                return 0;
-                break;
-            case 8: // 8
-                return ((gameType.mode === 'OBEABE') || (gameType.mode === 'UNDEUFE')) ? 8 : 0;
-                break;
-            case 9: // 9
-                return ((card.color === gameType.color) && (gameType.mode === 'TRUMPF')) ? 14 : 0;
-                break;
-            case 10: // 10
-                // TODO: Skalieren, da viel Wert, aber nicht wirklich starke Karte?
-                return 10;
-                break;
-            case 11: // bube
-                return ((card.color === gameType.color) && (gameType.mode === 'TRUMPF')) ? 20 : 2;
-                break;
-            case 12: // dame
-                return 3;
-                break;
-            case 13: // könig
-                return 4;
-                break;
-            case 14: // ass
-                return (gameType.mode === 'UNDEUFE') ? 0 : 11;
-                break;
-            default:
+        switch(gameType.mode) {
+            case 'TRUMPF':
+                return this._isTrumpf(card, gameType) ? TrumpfValues[card.number] : NotTrumpfValues[card.number]; 
+            break;
+            case 'OBEABE':
+                return ObeabeWeights[card.number];
+            break;
+            case 'UNDEUFE':
+                return UndeufeValues[card.number];
         }
     },
+    // Retourniert einen gewichteten Wert für die Kartenevaluierung beim Trumpfbestimmen
+    _mapCardToWeight: function(card, gameType) {
+        switch(gameType.mode) {
+            case 'TRUMPF':
+                return (card.color == gameType.color) ? TrumpfWeights[card.number] : NotTrumpfWeights[card.number]; 
+            break;
+            case 'OBEABE':
+                return ObeabeWeights[card.number];
+            break;
+            case 'UNDEUFE':
+                return UndeufeWeights[card.number];
+        }
+    },
+    // skeleton method: returns the gameType to be played
     chooseTrumpf: function (handcards) {
         //CHALLENGE2017: Implement logic to chose game mode which is best suited to your handcards or schiäbä. Consider that this decision ist quite crucial for your bot to be competitive
         
+        // Evaluate different options for own cards
+        // 1. Which is best for my cards
         let gameTypes = Object.create(GameTypes);
         var topGameType;
         var topGameTypeWeight = 0;
 
-        console.log('-----');
-        console.log('HANDKARTEN:');
-        // console.log(handcards);
-
-        for (var i = handcards.length - 1; i >= 0; i--) {
-            console.log(handcards[i].translate() + "\t\t" + handcards[i].color);
-        }
-
-        console.log('-----');
+        this._printHandcards(handcards);
 
         // TODO: zusätzlich 'Wiis' Wert mit 20% (?) zusätzlich Skalieren
+        // TODO: Trumpf Card Count
         for (var i = gameTypes.length - 1; i >= 0; i--) {
             var generalWeight = 0;
             var gameTypeWeight = 0;
             for (var j = handcards.length - 1; j >= 0; j--) {
-                generalWeight += this._mapCardToValue(handcards[j], gameTypes[i]);
-                // TODO: Spieltypgewicht für OBEABE zu hoch, UNDEUFE zu tief?
-                // if ((gameTypes[i].mode === 'UNDEUFE') || (gameTypes[i].mode === 'OBEABE') || (handcards[j].color === gameTypes[i].color)) {
-                //     gameTypeWeight += this._mapCardToValue(handcards[j], gameTypes[i]);
-                // }
-                // 
-                // TODO: Trumpf Card Count
-                // TODO: Gewichtung bei OBEABE / UNDEUFE nicht anhand vom Wert der Karte
+                generalWeight += this._mapCardToWeight(handcards[j], gameTypes[i]);
 
                 if (handcards[j].color === gameTypes[i].color) {
-                    gameTypeWeight += this._mapCardToValue(handcards[j], gameTypes[i]);
+                    gameTypeWeight += this._mapCardToWeight(handcards[j], gameTypes[i]);
                 }
             }
 
-            if (((generalWeight + gameTypeWeight) > topGameTypeWeight) && (gameTypes[i].mode === 'TRUMPF')) {
+            // Vergleiche die verschiedenen gameTypes und nimm den jeweils höchsten Wert
+            if ((generalWeight + gameTypeWeight) > topGameTypeWeight) {
                 topGameType = gameTypes[i];
                 topGameTypeWeight = (generalWeight + gameTypeWeight);
             }
 
-            console.log(gameTypes[i].name + ' --- Kartengewicht: ' + generalWeight + ' --- Spieltypgewicht: ' + gameTypeWeight + ' --- Summe: ' + (generalWeight + gameTypeWeight));
+            console.log(gameTypes[i].label + ' --- Kartengewicht: ' + generalWeight + ' --- Spieltypgewicht: ' + gameTypeWeight + ' --- Summe: ' + (generalWeight + gameTypeWeight));
         }
-
-        console.log('-----');
-        console.log('TOPGAMETYPE: ' + topGameType.color + ' - ' + topGameType.mode);
-        console.log('-----');
-
-        // Evaluate different options for own cards
-        // ("TRUMPF"(HEARTS","DIAMONDS","CLUBS","SPADES"),"OBEABE","UNDEUFE","SCHIEBE")
-        // 1. Which is best for my cards
-        
+        console.log("-----\r\nTOPGAMETYPE: " + topGameType.color + ' - ' + topGameType.mode + "\r\n-----");
 
         // 2. Which is best for my non-trumpf/obeabe/undeufe cards
         
-
         // 3. Which is statistically best for my other bot instance
 
-
+        // Set gameType according to evaluation above
         let gameType = { "mode": topGameType.mode, "trumpfColor": topGameType.color };
         return gameType;
     },
@@ -139,14 +111,30 @@ let Brain = {
         this.geschoben = gameType.mode === "SCHIEBE"; //just remember if it's a geschoben match
         this.gameType = gameType;
     },
+    // skeleton method: returns the card to be played
     chooseCard: function (handcards, tableCards) {
         //CHALLENGE2017: Implement logic to choose card so your bot will beat all the others. Keep in mind that your counterpart is another instance of your bot
 
         // 1. What are my possible cards to play (legal moves)
         let validCards = this.getPossibleCards(handcards, tableCards);
 
+        // 1.1 What is the current tableState? Are we playing the first card or
+        // do we respond to some other cards on the table?
+        if (tableCards.length === 0) {
+            console.log('Wir spielen die erste Karte! ' + this._defaultLogAttributes());
+        } else {
+            // Angespielte Farbe
+            let leadColor = tableCards[0].color;
+            console.log(leadColor + ' wurde angespielt. ' + this._defaultLogAttributes());
+        }
+
+        // 1.2 If only one card is left to play, play this card.
+        if (validCards.length === 1) {
+            return validCards[0];
+        }
+
         // 2. Is the Stich already ours?
-        
+
 
         // 2.1 Is it save to assume it can't be taken (chance?)
         
@@ -167,9 +155,9 @@ let Brain = {
         // give to tell my other bot instance which color I'd like him to play?
 
 
-
         return validCards[0]; // Just take the first valid card
     },
+    // skeleton method: returns valid cards to be played
     getPossibleCards: function (handCards, tableCards) {
         let validation = Validation.create(this.gameType.mode, this.gameType.trumpfColor);
         let possibleCards = handCards.filter(function (card) {
@@ -179,8 +167,23 @@ let Brain = {
         }, this);
         return possibleCards;
     },
+    // skeleton method
     setValidation: function (gameMode, trumpfColor) {
         this.validation = Validation.create(gameMode, trumpfColor);
+    },
+    // Ausgeben der Handkarten im Log (sortiert nach Farbe)
+    _printHandcards(handcards) {
+        console.log('-----');
+        console.log('HANDKARTEN:');
+        handcards = handcards.sort(handcards[0].sortByProperty('color'));
+        for (var i = handcards.length - 1; i >= 0; i--) {
+            console.log(handcards[i].translate());
+        }
+        console.log('-----');
+    },
+    // Zustand des aktuellen Spiels
+    _defaultLogAttributes() {
+        return [this.gameType.mode,this.gameType.color,this.geschoben].join(' / ');
     }
 };
 

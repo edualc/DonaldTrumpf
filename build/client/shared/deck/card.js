@@ -6,52 +6,29 @@ var CardColor = {
     CLUBS: "CLUBS",
     SPADES: "SPADES"
 };
+var CardTranslations = ['', '', '', '', '', '', 6, 7, 8, 9, 10, 'Bube', 'Dame', 'König', 'Ass'];
 
 var Card = {
     equals: function equals(otherCard) {
         return this.number === otherCard.number && this.color === otherCard.color;
     },
-
+    // cle: "toHuman" Übersetzung der Karte
     translate: function translate() {
-        switch (this.number) {
-            case 6:
-                // 6
-                return 6;
-                break;
-            case 7:
-                // 7
-                return 7;
-                break;
-            case 8:
-                // 8
-                return 8;
-                break;
-            case 9:
-                // 9
-                return 9;
-                break;
-            case 10:
-                // 10
-                return 10;
-                break;
-            case 11:
-                // bube
-                return 'Bube';
-                break;
-            case 12:
-                // dame
-                return 'Dame';
-                break;
-            case 13:
-                // könig
-                return 'König';
-                break;
-            case 14:
-                // ass
-                return 'Ass';
-                break;
-            default:
-        }
+        return CardTranslations[this.number] + "\t" + this.color;
+    },
+    // cle: Sortieren der Karten nach :prop
+    sortByProperty: function sortByProperty(prop) {
+        return function (a, b) {
+            if (typeof a[prop] === 'number') {
+                return a[prop] - b[prop];
+            } else if (a[prop] < b[prop]) {
+                return -1;
+            } else if (a[prop] > b[prop]) {
+                return 1;
+            } else {
+                return 0;
+            }
+        };
     }
 };
 
