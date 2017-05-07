@@ -12,7 +12,7 @@ var Bot = require('./bot');
 
 var args = process.argv.slice(2); // you can override your bot name with a second argument like "node build/client/app.js ws://127.0.0.1:3000 myBot1"
 var serverConnectionString = args[0];
-var botName = args.length >= 2 ? args[1] : "DonaldTrumpf"; //CHALLENGE2017: Set name for your bot
+var botName = args.length >= 2 ? args[1] : "DonaldTrumpf 3000"; //CHALLENGE2017: Set name for your bot
 
 var bot1 = Bot.create(botName);
 

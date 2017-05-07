@@ -29,6 +29,10 @@ var Bot = {
                 break;
             case MessageType.DEAL_CARDS.name:
                 //CHALLENGE2017: Getting cards from server... just put them to your handcards
+
+                // lehmacl1: reset statistics and counters
+                this.brain.resetPlayedCards();
+
                 this.handCards = data.map(function (item) {
                     return Card.create(item.number, item.color);
                 });
@@ -46,6 +50,10 @@ var Bot = {
             case MessageType.PLAYED_CARDS.name:
                 //CHALLENGE2017: This removes a handcard if the last played card on the table was one of yours.
                 var lastPlayedCard = data[data.length - 1];
+
+                // lehmacl1: This card was played last, handle statistics and counters
+                this.brain.registerCardWasPlayed(lastPlayedCard, data);
+
                 this.handCards = this.handCards.filter(function (card) {
                     return card.number !== lastPlayedCard.number || card.color !== lastPlayedCard.color;
                 });
@@ -67,6 +75,10 @@ var Bot = {
                 //Do nothing with that :-)
                 break;
             case MessageType.BROADCAST_STICH.name:
+
+                // lehmacl1: keep track of current stich
+                this.brain.registerStichCompleted();
+
                 //Do nothing with that :-)
                 break;
             case MessageType.BROADCAST_TOURNAMENT_STARTED.name:
