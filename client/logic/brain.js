@@ -17,8 +17,7 @@ let GameTypes = [
 ];
 
 // TODO: Evaluierungsstatistik mitführen
-let CurrentDeckWeights = {};
-let CurrentColorWeights = { color: '', count: 0, trumpfWeight: 0 };
+let CurrentColorWeights = { color: '', count: 0, trumpfWeight: 0, nonTrumpfWeight: 0 };
 
 // Effektive Kartenwerte beim Auszählen am Ende
 let TrumpfValues =    [0,0,0,0,0,0, 0, 0, 0,14,10,20, 3, 4,11]; // Kartenwert für Trumpf
@@ -26,11 +25,15 @@ let NotTrumpfValues = [0,0,0,0,0,0, 0, 0, 0, 0,10, 2, 3, 4,11]; // Kartenwert f�
 let ObeabeValues =    [0,0,0,0,0,0, 0, 0, 8, 0,10, 2, 3, 4,11]; // Kartenwert bei Obeabe
 let UndeufeValues =   [0,0,0,0,0,0,11, 0, 8, 0,10, 2, 3, 4, 0]; // Kartenwert bei Undeufe
 
-// Gewichtete Kartenwerte beim Auszählen am Ende (zurzeit "willkürlich" gewichtet)
-let TrumpfWeights =    [0,0,0,0,0,0, 1, 1, 1, 8, 2,13, 2, 4, 6]; // Kartenwert für Trumpf
-let NotTrumpfWeights = [0,0,0,0,0,0, 1, 1, 1, 1, 2, 4, 6, 9,13]; // Kartenwert für Nicht-Trumpf
-let ObeabeWeights =    [0,0,0,0,0,0, 1, 1, 1, 1, 2, 3, 4, 9,16]; // Kartenwert bei Obeabe
-let UndeufeWeights =   [0,0,0,0,0,0,16, 9, 4, 3, 2, 1, 1, 1, 1]; // Kartenwert bei Undeufe
+// Gewichtete Kartenwerte (zurzeit "willkürlich" gewichtet)
+// let TrumpfWeights =    [0,0,0,0,0,0, 1, 1, 1, 9, 1,11, 3, 4, 7]; // Kartenwert für Trumpf
+// let NotTrumpfWeights = [0,0,0,0,0,0, 1, 1, 1, 1, 3, 4, 7, 9,11]; // Kartenwert für Nicht-Trumpf
+// let ObeabeWeights =    [0,0,0,0,0,0, 1, 1, 1, 1, 3, 4, 7, 9,11]; // Kartenwert bei Obeabe
+// let UndeufeWeights =   [0,0,0,0,0,0,11, 9, 7, 4, 3, 1, 1, 1, 1]; // Kartenwert bei Undeufe
+let TrumpfWeights =    [0,0,0,0,0,0, 1, 2, 3, 8, 4, 9, 5, 6, 7]; // Kartenwert für Trumpf
+let NotTrumpfWeights = [0,0,0,0,0,0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // Kartenwert für Nicht-Trumpf
+let ObeabeWeights =    [0,0,0,0,0,0, 1, 1, 1, 2, 2, 5, 7, 8, 11]; // Kartenwert bei Obeabe
+let UndeufeWeights =   [0,0,0,0,0,0, 11, 8, 6, 5, 2, 2, 1, 1, 1]; // Kartenwert bei Undeufe
 
 // Höherer Wert gewinnt gegen tieferen Wert
 let TrumpfPriority =    [0,0,0,0,0,0,11,12,13,18,14,19,15,16,17]; // Trumpf gewinnt immer gegen Nichttrumpf (+10)
@@ -57,35 +60,100 @@ let Brain = {
 
         this._printHandcards(handcards);
 
-        // TODO: zusätzlich 'Wiis' Wert mit 20% (?) zusätzlich Skalieren
-        // TODO: Count How Many Trumpf do I have if this color would be Trumpf?
-        for (var i = gameTypes.length - 1; i >= 0; i--) {
-            var generalWeight = 0;
-            var gameTypeWeight = 0;
-            for (var j = handcards.length - 1; j >= 0; j--) {
-                generalWeight += this._mapCardToWeight(handcards[j], gameTypes[i]);
+        let cardColors = ["HEARTS", "DIAMONDS", "CLUBS", "SPADES"];
+        let evaluationArray = [];
 
-                if (handcards[j].color === gameTypes[i].trumpfColor) {
-                    gameTypeWeight += this._mapCardToWeight(handcards[j], gameTypes[i]);
+        let currentColorTrumpfWeight;
+        let currentColorNonTrumpfWeight;
+        let currentTrumpfCount;
+        let currentGameType;
+
+        // TRUMPF evalaution
+        for (var i = cardColors.length - 1; i >= 0; i--) {
+            currentColorTrumpfWeight = 0;
+            currentColorNonTrumpfWeight = 0;
+            currentGameType = { mode: 'TRUMPF', trumpfColor: cardColors[i] };
+
+            for (var j = handcards.length - 1; j >= 0; j--) {
+                if (this._isTrumpf(handcards[j], currentGameType)) {
+                    currentColorTrumpfWeight += this._mapCardToWeight(handcards[j], currentGameType);
+                } else {
+                    currentColorNonTrumpfWeight += this._mapCardToWeight(handcards[j], currentGameType);
                 }
             }
 
-            // Vergleiche die verschiedenen gameTypes und nimm den jeweils höchsten Wert
-            if ((generalWeight + gameTypeWeight) > topGameTypeWeight) {
-                topGameType = gameTypes[i];
-                topGameTypeWeight = (generalWeight + gameTypeWeight);
-            }
-
-            console.log(gameTypes[i].label + ' --- Kartengewicht: ' + generalWeight + ' --- Spieltypgewicht: ' + gameTypeWeight + ' --- Summe: ' + (generalWeight + gameTypeWeight));
+            // summary for the current color evaluation
+            evaluationArray.push({ weight: (((currentColorTrumpfWeight) * 1.2 + (currentColorNonTrumpfWeight / 3) * 0.8) * 2), color: cardColors[i], mode: 'TRUMPF' });
         }
-        console.log("-----\r\nTOPGAMETYPE: " + topGameType.trumpfColor + ' - ' + topGameType.mode + "\r\n-----");
+
+        // OBEABE evaluation
+        currentGameType = { mode: 'OBEABE' };
+        let obeabeWeight = 0;
+
+        for (var i = handcards.length - 1; i >= 0; i--) {
+            obeabeWeight += this._mapCardToWeight(handcards[i], currentGameType);
+        }
+        evaluationArray.push({ weight: obeabeWeight, mode: 'OBEABE', color: 'HEARTS' });
+
+
+        // UNDEUFE evaluation
+        currentGameType = { mode: 'UNDEUFE' };
+        let undeufeWeight = 0;
+
+        for (var i = handcards.length - 1; i >= 0; i--) {
+            undeufeWeight += this._mapCardToWeight(handcards[i], currentGameType);
+        }
+        evaluationArray.push({ weight: undeufeWeight, mode: 'UNDEUFE', color: 'HEARTS' });
+
+
+        // ITERATE TO FIND MAX
+        console.log('---###---');
+        let bestMode = evaluationArray[0];
+        for (var i = evaluationArray.length - 1; i >= 0; i--) {
+            console.log("weight:\t" + parseFloat(evaluationArray[i].weight).toFixed(2) + "\tmode:\t" + evaluationArray[i].mode + "\tcolor:\t" + evaluationArray[i].color)
+            if (evaluationArray[i].weight >= bestMode.weight) {
+                bestMode = evaluationArray[i];
+            }
+        }
+        console.log('---###---');
+
+
+        /**
+         * OLD
+         */
+        // // TODO: zusätzlich 'Wiis' Wert mit 20% (?) zusätzlich Skalieren
+        // // TODO: Count How Many Trumpf do I have if this color would be Trumpf?
+        // for (var i = gameTypes.length - 1; i >= 0; i--) {
+        //     var generalWeight = 0;
+        //     var gameTypeWeight = 0;
+        //     for (var j = handcards.length - 1; j >= 0; j--) {
+        //         generalWeight += this._mapCardToWeight(handcards[j], gameTypes[i]);
+
+        //         if (handcards[j].color === gameTypes[i].trumpfColor) {
+        //             gameTypeWeight += this._mapCardToWeight(handcards[j], gameTypes[i]);
+        //         }
+        //     }
+
+        //     // Vergleiche die verschiedenen gameTypes und nimm den jeweils höchsten Wert
+        //     if ((generalWeight + gameTypeWeight) > topGameTypeWeight) {
+        //         topGameType = gameTypes[i];
+        //         topGameTypeWeight = (generalWeight + gameTypeWeight);
+        //     }
+
+        //     console.log(gameTypes[i].label + ' --- Kartengewicht: ' + generalWeight + ' --- Spieltypgewicht: ' + gameTypeWeight + ' --- Summe: ' + (generalWeight + gameTypeWeight));
+        // }
+        // console.log("-----\r\nTOPGAMETYPE: " + topGameType.trumpfColor + ' - ' + topGameType.mode + "\r\n-----");
+        /**
+         * OLD
+         */
+
 
         // 2. Which is best for my non-trumpf/obeabe/undeufe cards
         
         // 3. Which is statistically best for my other bot instance
 
         // Set gameType according to evaluation above
-        let gameType = { "mode": topGameType.mode, "trumpfColor": topGameType.trumpfColor };
+        let gameType = { "mode": bestMode.mode, "trumpfColor": bestMode.color };
         return gameType;
     },
     gameMode: function (gameType) {
@@ -177,7 +245,7 @@ let Brain = {
                     } else {
                         // Angespielte Farbe
                         let leadColor = tableCards[0].color;
-                        
+
                         let highestCard = validCards[0];
 
                         // TODO: Hier kann potentiell untertrumpft werden!
@@ -229,7 +297,7 @@ let Brain = {
         // 6. If I can't play the correct color and don't want to use a TRUMPF, what color can i 
         // give to tell my other bot instance which color I'd like him to play?
         
-        return validCards[0]; // Just take the first valid card
+        return validCards[0]; // Just take the first valid card (you should not get here)
 
     },
     // skeleton method: returns valid cards to be played
