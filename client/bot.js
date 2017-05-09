@@ -24,7 +24,7 @@ let Bot = {
             answer = Messages.create(MessageType.CHOOSE_PLAYER_NAME.name, this.alias);
             break;
         case MessageType.REQUEST_SESSION_CHOICE.name:
-            answer = Messages.create(MessageType.CHOOSE_SESSION.name, "JOIN_EXISTING", this.sessionName, "TOURNAMENT", false);
+            answer = Messages.create(MessageType.CHOOSE_SESSION.name, "AUTOJOIN", this.sessionName, "TOURNAMENT", false);
             console.log('session choice answer: ' + answer);
             break;
         case MessageType.DEAL_CARDS.name:
