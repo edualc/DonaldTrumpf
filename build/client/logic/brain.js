@@ -284,7 +284,7 @@ var Brain = {
         // 6. If I can't play the correct color and don't want to use a TRUMPF, what color can i 
         // give to tell my other bot instance which color I'd like him to play?
 
-        return validCards[0]; // Just take the first valid card
+        return validCards[0]; // Just take the first valid card (you should not get here)
     },
     // skeleton method: returns valid cards to be played
     getPossibleCards: function getPossibleCards(handCards, tableCards) {
