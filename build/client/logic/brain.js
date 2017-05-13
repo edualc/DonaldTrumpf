@@ -4,8 +4,13 @@
  This implementation basically responds with either default behaviour or random valid cards.
  */
 
+var _StrategyFactory = require('./strategy/StrategyFactory');
+
 var Validation = require('../shared/validation/validation');
 var Card = require('./../shared/deck/card');
+
+
+var strategies = new _StrategyFactory.StrategyFactory().getStrategies();
 
 var GameTypes = [{ label: 'trumpfHearts', trumpfColor: 'HEARTS', mode: 'TRUMPF' }, { label: 'trumpfDiamonds', trumpfColor: 'DIAMONDS', mode: 'TRUMPF' }, { label: 'trumpfClubs', trumpfColor: 'CLUBS', mode: 'TRUMPF' }, { label: 'trumpfSpades', trumpfColor: 'SPADES', mode: 'TRUMPF' }, { label: 'obeabe', mode: 'OBEABE' }, { label: 'undeufe', mode: 'UNDEUFE' }];
 

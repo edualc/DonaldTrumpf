@@ -6,6 +6,9 @@
 
 let Validation = require('../shared/validation/validation');
 let Card = require('./../shared/deck/card');
+import { StrategyFactory } from './strategy/StrategyFactory';
+
+let strategies = new StrategyFactory().getStrategies();
 
 let GameTypes = [
     { label: 'trumpfHearts', trumpfColor: 'HEARTS', mode: 'TRUMPF' },
