@@ -435,7 +435,7 @@ let Brain = {
     _printHandcards(handcards) {
         console.log('-----');
         console.log('HANDKARTEN:');
-        handcards = handcards.sort(handcards[0].sortByProperty('color'));
+        handcards = handcards.sort(handcards[0].sortByColorAndNumber());
         for (var i = handcards.length - 1; i >= 0; i--) {
             console.log(handcards[i].translate());
         }

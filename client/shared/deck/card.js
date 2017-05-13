@@ -12,23 +12,35 @@ let Card = {
     equals: function(otherCard) {
         return this.number === otherCard.number && this.color === otherCard.color;
     },
-    // cle: "toHuman" Übersetzung der Karte
+    // lehmacl1: "toHuman" Übersetzung der Karte
     translate: function() {
         return CardTranslations[this.number] + "\t" + this.color;
     },
-    // cle: Sortieren der Karten nach :prop
+    // lehmacl1: Sortieren der Karten nach :prop
     sortByProperty: function(prop) {
-      return function(a, b) {
-        if (typeof a[prop] === 'number') {
-          return (a[prop] - b[prop]);
-        } else if (a[prop] < b[prop]) {
-          return -1;
-        } else if (a[prop] > b[prop]) {
-          return 1;
-        } else {
-            return 0;
-        }
-      };
+        return function(a, b) {
+            if (typeof a[prop] === 'number') {
+                return (a[prop] - b[prop]);
+            } else if (a[prop] < b[prop]) {
+                return -1;
+            } else if (a[prop] > b[prop]) {
+                return 1;
+            } else {
+                return 0;
+            }
+        };
+    },
+    // lehmacl1: Sortierte Karten wie man es gewohnt ist
+    sortByColorAndNumber: function() {
+        return function(a, b) {
+            if (a['color'] < b['color']) {
+                return -1;
+            } else if (a['color'] > b['color']) {
+                return 1;
+            } else {
+                return (b['number'] - a['number']);
+            }
+        };
     }
 };
 

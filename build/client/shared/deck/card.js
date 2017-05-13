@@ -29,6 +29,18 @@ var Card = {
                 return 0;
             }
         };
+    },
+    sortByColorAndNumber: function sortByColorAndNumber() {
+        var self = this;
+        return function (a, b) {
+            if (a['color'] < b['color']) {
+                return -1;
+            } else if (a['color'] > b['color']) {
+                return 1;
+            } else {
+                return b['number'] - a['number'];
+            }
+        };
     }
 };
 

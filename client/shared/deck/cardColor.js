@@ -1,5 +1,3 @@
-
-
 export const CardColor = {
     HEARTS: 'HEARTS',
     DIAMONDS: 'DIAMONDS',
