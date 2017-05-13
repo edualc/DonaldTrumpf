@@ -234,6 +234,7 @@ let Brain = {
                     // I am first to play this stich
                     if (this.stichCards.length === 0) {
                         let highestCard = validCards[0];
+                        let lowestCard = validCards[0];
 
                         // TODO: Hier kann potentiell untertrumpft werden!
                         let self = this;
@@ -241,9 +242,14 @@ let Brain = {
                             if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) > self._cardPriority(highestCard, highestCard.color, self.gameType)) {
                                 highestCard = validCards[i];
                             }
+                            if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) < self._cardPriority(lowestCard, lowestCard.color, self.gameType)) {
+                                lowestCard = validCards[i];
+                            }
                         }
 
-                        return highestCard;
+                        // Falls der Stich bereits uns gehört, spiele die schlechteste Karte
+                        // TODO: Testen, ist das sinnvoll?
+                        return stichIsOurs ? lowestCard : highestCard;
 
                     // Someone already played before me
                     } else {
@@ -251,6 +257,7 @@ let Brain = {
                         let leadColor = tableCards[0].color;
 
                         let highestCard = validCards[0];
+                        let lowestCard = validCards[0];
 
                         // TODO: Hier kann potentiell untertrumpft werden!
                         let self = this;
@@ -258,9 +265,14 @@ let Brain = {
                             if (self._cardPriority(validCards[i], leadColor, self.gameType) > self._cardPriority(highestCard, leadColor, self.gameType)) {
                                 highestCard = validCards[i];
                             }
+                            if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) < self._cardPriority(lowestCard, lowestCard.color, self.gameType)) {
+                                lowestCard = validCards[i];
+                            }
                         }
 
-                        return highestCard;
+                        // Falls der Stich bereits uns gehört, spiele die schlechteste Karte
+                        // TODO: Testen, ist das sinnvoll?
+                        return stichIsOurs ? lowestCard : highestCard;
                     }
                 }
 
