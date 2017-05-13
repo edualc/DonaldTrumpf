@@ -168,22 +168,24 @@ let Brain = {
         //CHALLENGE2017: Implement logic to choose card so your bot will beat all the others. Keep in mind that your counterpart is another instance of your bot
 
         // get all the legal cards to play at this time
-        let validCards = this.getPossibleCards(handcards, tableCards);
+        var validCards = this.getPossibleCards(handcards, tableCards);
+        var stichIsOurs = false;
 
         // We are the first to play this stich
         if (tableCards.length === 0) {
-            console.log('-----');
-            console.log('#####' + 'Wir spielen die erste Karte! ' + this._defaultLogAttributes());
-            console.log('-----');
+            console.log("-----\r\n#####" + ' Wir spielen die erste Karte! ' + this._defaultLogAttributes() + "\r\n-----");
 
         // A color has been played, we have to react to already played Cards
         } else {
             // Angespielte Farbe
             let leadColor = tableCards[0].color;
-            console.log('-----');
-            console.log('#####' + leadColor + ' wurde angespielt. ' + this._defaultLogAttributes());
-            console.log('-----');
+            console.log("-----\r\n#####" + leadColor + ' wurde angespielt. ' + this._defaultLogAttributes() + "\r\n-----");
+        
+            stichIsOurs = this._checkCurrentStichForOwnership(leadColor);
         }
+
+        console.log("-----\r\n###### Ist der Stich uns? " + stichIsOurs + "\r\n-----");
+
 
         // differentiate between the different gamemodes
         switch (this.gameType.mode) {
@@ -241,7 +243,6 @@ let Brain = {
                             }
                         }
 
-                        // Play highest Trumpf in the beginning to draw them out.
                         return highestCard;
 
                     // Someone already played before me
@@ -259,7 +260,6 @@ let Brain = {
                             }
                         }
 
-                        // Play highest Trumpf in the beginning to draw them out.
                         return highestCard;
                     }
                 }
@@ -368,17 +368,30 @@ let Brain = {
     _curTrumpfColor: function() {
         return (this._curGameMode() === 'TRUMPF') ? this.gameType.trumpfColor : '';
     },
-    // TODO: Is the current stich already ours?
-    _checkCurrentStichForOwnership: function() {
-        if (this.stichCards.length < 2) {
-            return false;
-        } else {
-            // get card of other bot instance
-            var alliedCard = this.stichCards[this.stichCards.length - 2];
-            var opposingCards = this.stichCards.split(this.stichCards.indexOf(alliedCard), 1);
+    // Is the current stich already ours?
+    _checkCurrentStichForOwnership: function(leadColor) {
+        console.log("### CURRENT STICH CARDS: ###")
+        for (var i = this.stichCards.length - 1; i >= 0; i--) {
+            console.log(this.stichCards[i]);
+        }
 
-            console.log('alliedCard: ' + alliedCard.translate());
-            console.log('opposingCards: ' + opposingCards.toString());
+        var alliedCardPriority;
+
+        switch (this.stichCards.length) {
+            case 0:
+            case 1:
+                return false;
+            case 2:
+                alliedCardPriority = this._cardPriority(this.stichCards[1], leadColor, this.gameType);
+                return (0 < (alliedCardPriority - this._cardPriority(this.stichCards[0], leadColor, this.gameType)));
+            break;
+            case 3:
+                alliedCardPriority = this._cardPriority(this.stichCards[1], leadColor, this.gameType);
+                if (0 < (alliedCardPriority - this._cardPriority(this.stichCards[0], leadColor, this.gameType))) {
+                    return (0 < (alliedCardPriority - this._cardPriority(this.stichCards[2], leadColor, this.gameType)));
+                } else {
+                    return false;
+                }
         }
     },
     // Zustand des aktuellen Spiels
