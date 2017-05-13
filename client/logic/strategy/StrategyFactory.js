@@ -1,9 +1,9 @@
-import { ObenabeStrategy } from './IStrategy.js';
+import { ObeabeStrategy } from './IStrategy.js';
 
 export class StrategyFactory {
 	constructor(){ }
 	
 	getStrategies(){
-			return new ObenabeStrategy();
+			return new ObeabeStrategy();
 	}
 }

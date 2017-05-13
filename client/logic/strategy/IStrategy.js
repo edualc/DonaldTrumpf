@@ -9,7 +9,7 @@ export class IStrategy {
 	}
 }
 
-export class ObenabeStrategy extends IStrategy {
+export class ObeabeStrategy extends IStrategy {
 	constructor() {
 		super();
 	}

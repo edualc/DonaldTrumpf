@@ -56,7 +56,9 @@ let Brain = {
         //CHALLENGE2017: Implement logic to chose game mode which is best suited to your handcards or schiäbä. Consider that this decision ist quite crucial for your bot to be competitive
         
         // Evaluate different options for own cards
-        // 1. Which is best for my cards
+        // 1. Which is best for my cards (done)
+        // 2. Which is best for my non-trumpf/obeabe/undeufe cards (done)
+        
         let gameTypes = Object.create(GameTypes);
         var topGameType;
         var topGameTypeWeight = 0;
@@ -120,39 +122,6 @@ let Brain = {
         }
         console.log('---###---');
 
-
-        /**
-         * OLD
-         */
-        // // TODO: zusätzlich 'Wiis' Wert mit 20% (?) zusätzlich Skalieren
-        // // TODO: Count How Many Trumpf do I have if this color would be Trumpf?
-        // for (var i = gameTypes.length - 1; i >= 0; i--) {
-        //     var generalWeight = 0;
-        //     var gameTypeWeight = 0;
-        //     for (var j = handcards.length - 1; j >= 0; j--) {
-        //         generalWeight += this._mapCardToWeight(handcards[j], gameTypes[i]);
-
-        //         if (handcards[j].color === gameTypes[i].trumpfColor) {
-        //             gameTypeWeight += this._mapCardToWeight(handcards[j], gameTypes[i]);
-        //         }
-        //     }
-
-        //     // Vergleiche die verschiedenen gameTypes und nimm den jeweils höchsten Wert
-        //     if ((generalWeight + gameTypeWeight) > topGameTypeWeight) {
-        //         topGameType = gameTypes[i];
-        //         topGameTypeWeight = (generalWeight + gameTypeWeight);
-        //     }
-
-        //     console.log(gameTypes[i].label + ' --- Kartengewicht: ' + generalWeight + ' --- Spieltypgewicht: ' + gameTypeWeight + ' --- Summe: ' + (generalWeight + gameTypeWeight));
-        // }
-        // console.log("-----\r\nTOPGAMETYPE: " + topGameType.trumpfColor + ' - ' + topGameType.mode + "\r\n-----");
-        /**
-         * OLD
-         */
-
-
-        // 2. Which is best for my non-trumpf/obeabe/undeufe cards
-        
         // 3. Which is statistically best for my other bot instance
 
         // Set gameType according to evaluation above
@@ -248,7 +217,7 @@ let Brain = {
                         }
 
                         // Falls der Stich bereits uns gehört, spiele die schlechteste Karte
-                        // TODO: Testen, ist das sinnvoll?
+                        // TESTED: ist sinnvoll
                         return stichIsOurs ? lowestCard : highestCard;
 
                     // Someone already played before me
@@ -265,13 +234,14 @@ let Brain = {
                             if (self._cardPriority(validCards[i], leadColor, self.gameType) > self._cardPriority(highestCard, leadColor, self.gameType)) {
                                 highestCard = validCards[i];
                             }
-                            if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) < self._cardPriority(lowestCard, lowestCard.color, self.gameType)) {
+                            // TODO: Wieso ist hier validCards[i] besser als v0.1, mit leadColor (was an sich logischer wäre) schlechter?
+                            if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) < self._cardPriority(lowestCard, validCards[i].color, self.gameType)) {
                                 lowestCard = validCards[i];
                             }
                         }
 
                         // Falls der Stich bereits uns gehört, spiele die schlechteste Karte
-                        // TODO: Testen, ist das sinnvoll?
+                        // TESTED: ist sinnvoll
                         return stichIsOurs ? lowestCard : highestCard;
                     }
                 }
