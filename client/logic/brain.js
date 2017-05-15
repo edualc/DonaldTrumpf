@@ -29,10 +29,6 @@ let ObeabeValues =    [0,0,0,0,0,0, 0, 0, 8, 0,10, 2, 3, 4,11]; // Kartenwert be
 let UndeufeValues =   [0,0,0,0,0,0,11, 0, 8, 0,10, 2, 3, 4, 0]; // Kartenwert bei Undeufe
 
 // Gewichtete Kartenwerte (zurzeit "willkürlich" gewichtet)
-// let TrumpfWeights =    [0,0,0,0,0,0, 1, 1, 1, 9, 1,11, 3, 4, 7]; // Kartenwert für Trumpf
-// let NotTrumpfWeights = [0,0,0,0,0,0, 1, 1, 1, 1, 3, 4, 7, 9,11]; // Kartenwert für Nicht-Trumpf
-// let ObeabeWeights =    [0,0,0,0,0,0, 1, 1, 1, 1, 3, 4, 7, 9,11]; // Kartenwert bei Obeabe
-// let UndeufeWeights =   [0,0,0,0,0,0,11, 9, 7, 4, 3, 1, 1, 1, 1]; // Kartenwert bei Undeufe
 let TrumpfWeights =    [0,0,0,0,0,0, 1, 2, 3, 8, 4, 9, 5, 6, 7]; // Kartenwert für Trumpf
 let NotTrumpfWeights = [0,0,0,0,0,0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // Kartenwert für Nicht-Trumpf
 let ObeabeWeights =    [0,0,0,0,0,0, 1, 1, 1, 2, 2, 5, 7, 8, 11]; // Kartenwert bei Obeabe
