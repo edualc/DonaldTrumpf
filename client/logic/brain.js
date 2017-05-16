@@ -388,13 +388,19 @@ let Brain = {
         if (this._isTrumpf(lastPlayedCard, this.gameType)) {
             this.trumpfCount += 1;
         }
+
+        this.chanceCalc.cardsToTrack.push({
+            card: lastPlayedCard,
+            leadColor: playedCards[0].color,
+            trumpfColor: (this.gameType.mode === 'TRUMPF') ? this.gameType.trumpfColor : false
+        });
     },
     // this method keeps track of the current stich.
-    registerStichCompleted: function(playedCards) {
+    registerStichCompleted: function(data) {
         this.stichCount += 1;
         this.stichCards = [];
 
-        this.chanceCalc.registerStichCompleted(playedCards);
+        this.chanceCalc.registerStichCompleted(data);
     },
     // skeleton method
     setValidation: function (gameMode, trumpfColor) {
@@ -402,7 +408,7 @@ let Brain = {
     },
     // Gives the current table and handcards to the chanceCalc
     updateChanceCalc: function(handcards, tableCards) {
-        this.chanceCalc.update(handcards, tableCards);
+        this.chanceCalc.update(handcards, tableCards, this.gameType);
     },
     // Retourniert die Stärke einer Karte bzgl. einer angespielten Farbe :leadColor
     // Zum Beispiel hat leadColor-Ass einen Wert von 9, eine Trumpf-6 hat aber eine 11
