@@ -390,9 +390,11 @@ let Brain = {
         }
     },
     // this method keeps track of the current stich.
-    registerStichCompleted: function() {
+    registerStichCompleted: function(playedCards) {
         this.stichCount += 1;
         this.stichCards = [];
+
+        this.chanceCalc.registerStichCompleted(playedCards);
     },
     // skeleton method
     setValidation: function (gameMode, trumpfColor) {

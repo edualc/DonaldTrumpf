@@ -8,18 +8,14 @@ var Colors = [
 	'SPADES'
 ];
 
-/**
- * initCardsInGame[color][number]
- *  1		Card was played, your team got the stich
- *  0		Card NOT played
- * -1		Card was played, opposing team got the stich
- */
-const initCardsInGame = [
-	[0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0],		// HEARTS
-	[0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0],		// DIAMONDS
-	[0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0],		// CLUBS
-	[0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0]		// SPADES
-];
+
+// const initCardsInGame = [
+// 	// TODO: Einarbeiten
+// 	[0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0],		// HEARTS
+// 	[0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0],		// DIAMONDS
+// 	[0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0],		// CLUBS
+// 	[0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0]		// SPADES
+// ];
 
 // initChanceToHaveCard[player][color][number]
 // 
@@ -64,16 +60,23 @@ var ChanceCalc = {
 	chanceToHaveCard: [],
 	playerId: 0,
 	cardsToProcess: [],
+	playerHasColor: [],
 
 	initialize: function (handcards) {
 		// Initialize both initial values for the Arrays
-		this.cardsInGame = JSON.parse(JSON.stringify(initCardsInGame));
+		this.cardsInGame = this._initCardsInGame();
+
 		this.chanceToHaveCard = JSON.parse(JSON.stringify(initChanceToHaveCard));
+
+		this.playerHasColor = this._initPlayerHasColorArray();
 
 		// Set own cards to 1 for self and 0 for other players
 		for (var i = handcards.length - 1; i >= 0; i--) {
 			this.setHasCard(handcards[i], 0, 1);
 		}
+	},
+	setCardInGame: function(card) {
+		this.cardsInGame[this.mapColorToIndex(card)][card.number] = 0;
 	},
 	setChanceToHaveCard: function(card, playerId, value) {
 		this.chanceToHaveCard[playerId][this.mapColorToIndex(card)][card.number] = value;
@@ -84,6 +87,9 @@ var ChanceCalc = {
 		this.setChanceToHaveCard(card, (playerId + 2) % 4, 0);
 		this.setChanceToHaveCard(card, (playerId + 3) % 4, 0);
 	},
+	getCardInGame: function(card) {
+		return this.cardsInGame[this.mapColorToIndex(card)][card.number];
+	},
 	getChanceToHaveCard: function(card, playerId) {
 		return this.chanceToHaveCard[playerId][this.mapColorToIndex(card)][card.number];
 	},
@@ -93,6 +99,12 @@ var ChanceCalc = {
 	// is being called from brain.registerCardWasPlayer()
 	registerCardWasPlayed: function(lastPlayedCard, playedCards) {
 		this.cardsToProcess.push(lastPlayedCard);
+		this.setCardInGame(lastPlayedCard);
+	},
+	registerStichCompleted: function(playedCards) {
+
+		// TODO
+
 	},
 	// is being called from brain.chooseCard()
 	update: function(handcards, tableCards) {
@@ -107,6 +119,8 @@ var ChanceCalc = {
 		for (var i = this.cardsToProcess.length - 1; i >= 0; i--) {
 			this.cardsToProcess.pop();
 		}
+
+		this._printCardsInGame();
 
 
 		// TODO:
@@ -150,31 +164,38 @@ var ChanceCalc = {
 		this.cardsToProcess = [];
 		this._printChanceToHaveCardArray();
 	},
+	/**
+	 * initCardsInGame[color][number]
+	 *  1		Card was played, your team got the stich
+	 *  0		Card NOT played, can still be played by anyone
+	 * -1		Card was played, opposing team got the stich
+	 */
+	_initCardsInGame: function() {
+		return new Array(4).fill(new Array(15).fill(0));
+	},
+	// Für jeden Spieler Array mit Farben, die er nicht
+	// mehr hat (1 = Spieler hat Farbe, 0 = Spieler hat Farbe nicht mehr)
+	_initPlayerHasColorArray: function() {
+		return new Array(4).fill(new Array(4).fill(1));
+	},
 	// Prints the content of the chanceToHaveCard Array
 	_printChanceToHaveCardArray: function() {
-		console.log(
-			'\t\t\t#####\n' 
-			+ JSON.stringify(this.chanceToHaveCard[0][0]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[0][1]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[0][2]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[0][3]) + '\n\n' 
+		console.log('\t\t\t###### - CHANCE TO HAVE CARD');
+		for (var i = this.chanceToHaveCard.length - 1; i >= 0; i--) {
+			for (var j = this.chanceToHaveCard[i].length - 1; j >= 0; j--) {
+				console.log(JSON.stringify(this.chanceToHaveCard[i][j]));
+			}
+		}
+		console.log('\t\t\t######');
+	},
+	// Prints the content of the cardsInGame Array
+	_printCardsInGame: function() {
+		console.log('\t\t\t###### - CARDS IN GAME');
+		for (var i = this.cardsInGame.length - 1; i >= 0; i--) {
+			console.log(JSON.stringify(this.cardsInGame[i]));
+		}
+		console.log('\t\t\t######');
 
-			+ JSON.stringify(this.chanceToHaveCard[1][0]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[1][1]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[1][2]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[1][3]) + '\n\n'
-
-			+ JSON.stringify(this.chanceToHaveCard[2][0]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[2][1]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[2][2]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[2][3]) + '\n\n'
-
-			+ JSON.stringify(this.chanceToHaveCard[3][0]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[3][1]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[3][2]) + '\n' 
-			+ JSON.stringify(this.chanceToHaveCard[3][3]) + '\n' 
-			+ '\n\t\t\t#####'
-		);	
 	}
 };
 

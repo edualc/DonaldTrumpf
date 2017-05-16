@@ -77,7 +77,7 @@ let Bot = {
         case MessageType.BROADCAST_STICH.name:
 
             // lehmacl1: keep track of current stich
-            this.brain.registerStichCompleted();
+            this.brain.registerStichCompleted(data.playedCards);
         
             //Do nothing with that :-)
             break;

@@ -17,5 +17,4 @@ export class ObeabeStrategy extends IStrategy {
 	bockCount(){
 		return this.bockCount;
 	}
-
 }
