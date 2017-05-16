@@ -30,12 +30,12 @@ let Bot = {
         case MessageType.DEAL_CARDS.name:
             //CHALLENGE2017: Getting cards from server... just put them to your handcards
 
-            // lehmacl1: reset statistics and counters
-            this.brain.resetPlayedCards();
-
             this.handCards = data.map(function (item) {
                 return Card.create(item.number, item.color);
             });
+
+            // lehmacl1: reset statistics and counters
+            this.brain.resetPlayedCards(this.handCards);
             break;
         case MessageType.REQUEST_TRUMPF.name:
             //CHALLENGE2017: Ask the brain which gameMode to choose

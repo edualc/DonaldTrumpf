@@ -41,6 +41,21 @@ let Card = {
                 return (b['number'] - a['number']);
             }
         };
+    },
+    // returns a full deck of all possible cards
+    getFullDeck: function() {
+        let cardColors = ['HEARTS','DIAMONDS','CLUBS','SPADES'];
+        var tmp = [];
+
+        for (var j = 14; j >= 6; j--) {
+            for (var i = cardColors.length - 1; i >= 0; i--) {
+                var tmpCard = Object.create(Card);
+                tmpCard.number = j;
+                tmpCard.color = cardColors[i];
+                tmp.push(tmpCard);
+            }
+        }
+        return tmp;
     }
 };
 

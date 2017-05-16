@@ -6,39 +6,32 @@
 
 let Validation = require('../shared/validation/validation');
 let Card = require('./../shared/deck/card');
+let ChanceCalc = require('./ChanceCalc');
+
 import { StrategyFactory } from './strategy/StrategyFactory';
 
 let strategies = new StrategyFactory().getStrategies();
-
-let GameTypes = [
-    { label: 'trumpfHearts', trumpfColor: 'HEARTS', mode: 'TRUMPF' },
-    { label: 'trumpfDiamonds', trumpfColor: 'DIAMONDS', mode: 'TRUMPF' },
-    { label: 'trumpfClubs', trumpfColor: 'CLUBS', mode: 'TRUMPF' },
-    { label: 'trumpfSpades', trumpfColor: 'SPADES', mode: 'TRUMPF' },
-    { label: 'obeabe', mode: 'OBEABE' },
-    { label: 'undeufe', mode: 'UNDEUFE' }  
-];
 
 // TODO: Evaluierungsstatistik mitführen
 let CurrentColorWeights = { color: '', count: 0, trumpfWeight: 0, nonTrumpfWeight: 0 };
 
 // Effektive Kartenwerte beim Auszählen am Ende
-let TrumpfValues =    [0,0,0,0,0,0, 0, 0, 0,14,10,20, 3, 4,11]; // Kartenwert für Trumpf
-let NotTrumpfValues = [0,0,0,0,0,0, 0, 0, 0, 0,10, 2, 3, 4,11]; // Kartenwert für Nicht-Trumpf
-let ObeabeValues =    [0,0,0,0,0,0, 0, 0, 8, 0,10, 2, 3, 4,11]; // Kartenwert bei Obeabe
-let UndeufeValues =   [0,0,0,0,0,0,11, 0, 8, 0,10, 2, 3, 4, 0]; // Kartenwert bei Undeufe
+let TrumpfValues =    [0,0,0,0,0,0,  0, 0, 0,14,10,20, 3, 4,11]; // Kartenwert für Trumpf
+let NotTrumpfValues = [0,0,0,0,0,0,  0, 0, 0, 0,10, 2, 3, 4,11]; // Kartenwert für Nicht-Trumpf
+let ObeabeValues =    [0,0,0,0,0,0,  0, 0, 8, 0,10, 2, 3, 4,11]; // Kartenwert bei Obeabe
+let UndeufeValues =   [0,0,0,0,0,0, 11, 0, 8, 0,10, 2, 3, 4, 0]; // Kartenwert bei Undeufe
 
 // Gewichtete Kartenwerte (zurzeit "willkürlich" gewichtet)
-let TrumpfWeights =    [0,0,0,0,0,0, 1, 2, 3, 8, 4, 9, 5, 6, 7]; // Kartenwert für Trumpf
-let NotTrumpfWeights = [0,0,0,0,0,0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // Kartenwert für Nicht-Trumpf
-let ObeabeWeights =    [0,0,0,0,0,0, 1, 1, 1, 2, 2, 5, 7, 8, 11]; // Kartenwert bei Obeabe
+let TrumpfWeights =    [0,0,0,0,0,0,  1, 2, 3, 8, 4, 9, 5, 6, 7]; // Kartenwert für Trumpf
+let NotTrumpfWeights = [0,0,0,0,0,0,  1, 2, 3, 4, 5, 6, 7, 8, 9]; // Kartenwert für Nicht-Trumpf
+let ObeabeWeights =    [0,0,0,0,0,0,  1, 1, 1, 2, 2, 5, 7, 8,11]; // Kartenwert bei Obeabe
 let UndeufeWeights =   [0,0,0,0,0,0, 11, 8, 6, 5, 2, 2, 1, 1, 1]; // Kartenwert bei Undeufe
 
 // Höherer Wert gewinnt gegen tieferen Wert
-let TrumpfPriority =    [0,0,0,0,0,0,11,12,13,18,14,19,15,16,17]; // Trumpf gewinnt immer gegen Nichttrumpf (+10)
-let NotTrumpfPriority = [0,0,0,0,0,0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-let ObeabePriority =    [0,0,0,0,0,0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-let UndeufePriority =   [0,0,0,0,0,0, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+let TrumpfPriority =    [0,0,0,0,0,0, 11,12,13,18,14,19,15,16,17]; // Trumpf gewinnt immer gegen Nichttrumpf (+10)
+let NotTrumpfPriority = [0,0,0,0,0,0,  1, 2, 3, 4, 5, 6, 7, 8, 9];
+let ObeabePriority =    [0,0,0,0,0,0,  1, 2, 3, 4, 5, 6, 7, 8, 9];
+let UndeufePriority =   [0,0,0,0,0,0,  9, 8, 7, 6, 5, 4, 3, 2, 1];
 
 let Brain = {
     geschoben: false,
@@ -47,6 +40,8 @@ let Brain = {
     stichCards: [], // cards that are in the current stich
     trumpfCount: 0,
     stichCount: 0,
+    chanceCalc: ChanceCalc,
+
     // skeleton method: returns the gameType to be played
     chooseTrumpf: function (handcards) {
         //CHALLENGE2017: Implement logic to chose game mode which is best suited to your handcards or schiäbä. Consider that this decision ist quite crucial for your bot to be competitive
@@ -54,8 +49,6 @@ let Brain = {
         // Evaluate different options for own cards
         // 1. Which is best for my cards (done)
         // 2. Which is best for my non-trumpf/obeabe/undeufe cards (done)
-        
-        let gameTypes = Object.create(GameTypes);
         var topGameType;
         var topGameTypeWeight = 0;
 
@@ -63,11 +56,16 @@ let Brain = {
 
         let cardColors = ["HEARTS", "DIAMONDS", "CLUBS", "SPADES"];
         let evaluationArray = [];
+        let mateEvaluationArray = [];
 
         let currentColorTrumpfWeight;
         let currentColorNonTrumpfWeight;
         let currentTrumpfCount;
         let currentGameType;
+
+        let cardToEvaluate;
+        let chance;
+
 
         // TRUMPF evalaution
         for (var i = cardColors.length - 1; i >= 0; i--) {
@@ -86,6 +84,7 @@ let Brain = {
             // summary for the current color evaluation
             evaluationArray.push({ weight: (((currentColorTrumpfWeight) * 1.2 + (currentColorNonTrumpfWeight / 3) * 0.8) * 2), color: cardColors[i], mode: 'TRUMPF' });
         }
+
 
         // OBEABE evaluation
         currentGameType = { mode: 'OBEABE' };
@@ -118,7 +117,82 @@ let Brain = {
         }
         console.log('---###---');
 
+
+
+
+
+
         // 3. Which is statistically best for my other bot instance
+        var fullDeck = handcards[0].getFullDeck();
+
+        // TRUMPF evalaution
+        for (var i = cardColors.length - 1; i >= 0; i--) {
+            currentColorTrumpfWeight = 0;
+            currentColorNonTrumpfWeight = 0;
+            currentGameType = { mode: 'TRUMPF', trumpfColor: cardColors[i] };
+
+            for (var h = fullDeck.length - 1; h >= 0; h--) {
+                cardToEvaluate = fullDeck[h];
+                chance = this.chanceCalc.getChanceToHaveCard(cardToEvaluate, 1); // index 1,2 or 3 works, just NOT 0
+
+                if (this._isTrumpf(cardToEvaluate, currentGameType)) {
+                    currentColorTrumpfWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
+                } else {
+                    currentColorNonTrumpfWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
+                }
+            }
+            // summary for the current color evaluation
+            mateEvaluationArray.push({ weight: (((currentColorTrumpfWeight) * 1.2 + (currentColorNonTrumpfWeight / 3) * 0.8) * 2), color: cardColors[i], mode: 'TRUMPF' });
+        }
+
+
+        // OBEABE evaluation
+        currentGameType = { mode: 'OBEABE' };
+        obeabeWeight = 0;
+
+        for (var i = fullDeck.length - 1; i >= 0; i--) {
+            cardToEvaluate = fullDeck[i];
+            chance = this.chanceCalc.getChanceToHaveCard(cardToEvaluate, 1); // index 1,2 or 3 works, just NOT 0
+            obeabeWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
+        }
+        mateEvaluationArray.push({ weight: obeabeWeight, mode: 'OBEABE', color: 'HEARTS' });
+
+
+        // UNDEUFE evaluation
+        currentGameType = { mode: 'UNDEUFE' };
+        undeufeWeight = 0;
+
+        for (var i = fullDeck.length - 1; i >= 0; i--) {
+            cardToEvaluate = fullDeck[i];
+            chance = this.chanceCalc.getChanceToHaveCard(cardToEvaluate, 1); // index 1,2 or 3 works, just NOT 0
+            undeufeWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
+        }
+        mateEvaluationArray.push({ weight: undeufeWeight, mode: 'UNDEUFE', color: 'HEARTS' });
+
+
+        // ITERATE TO FIND MAX
+        console.log('---###---');
+        let mateBestMode = mateEvaluationArray[0];
+        for (var i = mateEvaluationArray.length - 1; i >= 0; i--) {
+            console.log("weight:\t" + parseFloat(mateEvaluationArray[i].weight).toFixed(2) + "\tmode:\t" + mateEvaluationArray[i].mode + "\tcolor:\t" + evaluationArray[i].color)
+            if (mateEvaluationArray[i].weight >= mateBestMode.weight) {
+                mateBestMode = mateEvaluationArray[i];
+            }
+        }
+        console.log('---###---');
+
+
+
+
+        // TODO:
+        // Evaluation between "own" cards, "mate" cards and "enemy" cards
+
+
+
+
+
+
+
 
         // Set gameType according to evaluation above
         let gameType = { "mode": bestMode.mode, "trumpfColor": bestMode.color };
@@ -131,6 +205,9 @@ let Brain = {
     // skeleton method: returns the card to be played
     chooseCard: function (handcards, tableCards) {
         //CHALLENGE2017: Implement logic to choose card so your bot will beat all the others. Keep in mind that your counterpart is another instance of your bot
+
+        // Update the current statistics
+        this.updateChanceCalc(handcards, tableCards);
 
         // get all the legal cards to play at this time
         var validCards = this.getPossibleCards(handcards, tableCards);
@@ -201,7 +278,6 @@ let Brain = {
                         let highestCard = validCards[0];
                         let lowestCard = validCards[0];
 
-                        // TODO: Hier kann potentiell untertrumpft werden!
                         let self = this;
                         for (var i = validCards.length - 1; i >= 0; i--) {
                             if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) > self._cardPriority(highestCard, highestCard.color, self.gameType)) {
@@ -224,7 +300,6 @@ let Brain = {
                         let highestCard = validCards[0];
                         let lowestCard = validCards[0];
 
-                        // TODO: Hier kann potentiell untertrumpft werden!
                         let self = this;
                         for (var i = validCards.length - 1; i >= 0; i--) {
                             if (self._cardPriority(validCards[i], leadColor, self.gameType) > self._cardPriority(highestCard, leadColor, self.gameType)) {
@@ -279,7 +354,6 @@ let Brain = {
         // give to tell my other bot instance which color I'd like him to play?
         
         return validCards[0]; // Just take the first valid card (you should not get here)
-
     },
     // skeleton method: returns valid cards to be played
     getPossibleCards: function (handCards, tableCards) {
@@ -292,15 +366,22 @@ let Brain = {
         return possibleCards;
     },
     // this method reset the statistics and counters as a new game is just being started
-    resetPlayedCards: function() {
+    resetPlayedCards: function(handcards) {
         this.playedCards = [];
         this.trumpfCount = 0;
         this.hadTrumpfInLastStich = true;
         this.stichCount = 0;
+
+        // RESET chanceCalc
+        this.chanceCalc = null;
+        this.chanceCalc = ChanceCalc.create();
+        this.chanceCalc.initialize(handcards);
     },
     // this method handles statistics and counters for cards played in this game
     // and add :lastPlayedCard to the already played cards
     registerCardWasPlayed: function(lastPlayedCard, playedCards) {
+        this.chanceCalc.registerCardWasPlayed(lastPlayedCard, playedCards);
+        
         this.stichCards = playedCards;
 
         this.playedCards.push(lastPlayedCard);
@@ -316,6 +397,10 @@ let Brain = {
     // skeleton method
     setValidation: function (gameMode, trumpfColor) {
         this.validation = Validation.create(gameMode, trumpfColor);
+    },
+    // Gives the current table and handcards to the chanceCalc
+    updateChanceCalc: function(handcards, tableCards) {
+        this.chanceCalc.update(handcards, tableCards);
     },
     // Retourniert die Stärke einer Karte bzgl. einer angespielten Farbe :leadColor
     // Zum Beispiel hat leadColor-Ass einen Wert von 9, eine Trumpf-6 hat aber eine 11
