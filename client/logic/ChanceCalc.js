@@ -10,27 +10,21 @@ var Colors = [
 
 var ChanceCalc = {
 	cardsInGame: [], // cardsInGame[playerId][color][number]
-	cardsToProcess: [], // cardsToProcess[cardId]
-	cardsToTrack: [], // cardsToTrack[cardId]
+	cardsOfColorPlayed: [], // cardsOfColorPlayer[color]
 	chanceToHaveCard: [], // chanceToHaveCard[playerId][color][number]
 	gameType: {},
 	playerHasColor: [], // playerHasColor[playerId][color]
-	cardsOfColorPlayed: [], // cardsOfColorPlayer[color]
 	playerId: 0,
+	stich: [], // stich[stichCount].playedCards[0-3]
+	stichCount: 0,
 
 	initialize: function (handcards) {
 		// Initialize both initial values for the Arrays
 		this.cardsInGame = this._initCardsInGameArray();
 		this.playerHasColor = this._initPlayerHasColorArray();
 		this.chanceToHaveCard = this._initChanceToHaveCardArray();
-
-		for (var i = this.cardsToProcess.length - 1; i >= 0; i--) {
-			this.cardsToProcess.pop();
-		}
-
-		for (var i = this.cardsToTrack.length - 1; i >= 0; i--) {
-			this.cardsToTrack.pop();
-		}
+		this.stich = this._initStich();
+		this.stichCount = 0;
 
 		this.cardsOfColorPlayed = this._initArray(4,0);
 
@@ -74,10 +68,15 @@ var ChanceCalc = {
 	},
 	// is being called from brain.registerCardWasPlayer()
 	// PLAYED_CARDS
-	registerCardWasPlayed: function(lastPlayedCard, playedCards) {
+	registerCardWasPlayed: function(lastPlayedCard, playedCards, stichCount, stichCards) {
 		// mark card as played in the current stich
-		this.cardsToProcess.push(lastPlayedCard);
 		this.setCardInGame(lastPlayedCard, 'x');
+
+		// set leadColor for a stich
+		this.stich[stichCount].playedCards.push(lastPlayedCard);
+		if (this.stich[stichCount].playedCards.length === 1) {
+			this.stich[stichCount].leadColor = lastPlayedCard.color;	
+		}
 
 		// increment the cards of color played counter
 		this.cardsOfColorPlayed[this.mapCardToColorIndex(lastPlayedCard)] += 1;
@@ -93,6 +92,8 @@ var ChanceCalc = {
 		if (data.name === "DonaldTrumpf 3000") {
 			value = 1;
 		}
+
+		this.stichCount += 1;
 
 		// loop over all the cards and set the 'x'-marked cards
 		// to the correct value (1 or -1) depending on who made the stich
@@ -116,68 +117,16 @@ var ChanceCalc = {
 	// is being called from brain.chooseCard()
 	// REQUEST_CARD
 	update: function(handcards, tableCards, gameType) {
-		// handle cardsToProcess
-		// (this makes sure, that players get their cards subtracted from the
-		// chanceToHaveCard array as cards are being played)
-		// ====================================================================
-		// the player indices ((this.playerId + 3 + (3 * i)) % 4) are because this is being executed
-		// during the chooseCard function, which means the last card added was by the player
-		// just before us, meaning ID = 3 which is the same as this.playerId(0) + 3 and incrementing
-		// by (3 * i) as +3 is the same as -1 in modulo 4
-		console.log('cardsToProcess of ChanceCalc: ' + this.cardsToProcess.length + '\n' + JSON.stringify(this.cardsToProcess));
-		for (var i = 0; i < this.cardsToProcess.length; i++) {
-			// increment by 3 => go back one (in modulo 4), start at last
-			this.setHasCard(
-				this.cardsToProcess[(this.cardsToProcess.length - 1) - i],
-				((this.playerId + 3 + (3 * i)) % 4),
-				0
-			);
-		}
-		for (var i = this.cardsToProcess.length - 1; i >= 0; i--) {
-			this.cardsToProcess.pop();
-		}
-		
-		// handle cardsToTrack
-		// (this makes sure, that players that can't play a certain color
-		// are being flagged)
-		// ====================================================================
-		// the player indices ((this.playerId + 3 + (3 * i)) % 4) are because this is being executed
-		// during the chooseCard function, which means the last card added was by the player
-		// just before us, meaning ID = 3 which is the same as this.playerId(0) + 3 and incrementing
-		// by (3 * i) as +3 is the same as -1 in modulo 4
-		console.log('cardsToTrack of ChanceCalc: ' + this.cardsToTrack.length + '\n' + JSON.stringify(this.cardsToTrack));
-		for (var i = this.cardsToTrack.length - 1; i >= 0; i--) {
-			// Trumpf is not being played by player => interesting case, as trumpf 
-			// could be played at any time and is no help to determine if player 
-			// has no cards of a certain color
-			if (this.cardsToTrack[i].card.color !== this.cardsToTrack[i].trumpfColor) {
-				// Trumpf was played as leadColor, but player did NOT play a trumpf
-				// ==> mark this player, as he has no "this.cardsToTrack[i].trumpfColor" cards left!
-				if (this.cardsToTrack[i].leadColor === this.cardsToTrack[i].trumpfColor) {
-					this.markPlayerHasNoCardsOfColor(((this.playerId + 3 + (3 * i)) % 4), this.cardsToTrack[i].leadColor);
-
-				// neither leadColor nor the cards color are trumpf. Check if the player
-				// played a leadColor card or not.
-				} else {
-					// Player neither played the leadColor nor a trumpf
-					// ==> mark this player, as he has no "this.cardsToTrack[i].color" cards left!
-					if (this.cardsToTrack[i].card.color !== this.cardsToTrack[i].leadColor) {
-						this.markPlayerHasNoCardsOfColor(((this.playerId + 3 + (3 * i)) % 4), this.cardsToTrack[i].leadColor);
-					}
-				}
-			}
-		}
-
-		for (var i = this.cardsToTrack.length - 1; i >= 0; i--) {
-			this.cardsToTrack.pop();
-		}
+		this._setPlayerPosForCurrentStich();
+		this._trackNewlyPlayedCards(gameType);
 
 		// triggers a new calculation for the chanceToHaveCard array
 		this.triggerChanceCalculation();
 
-		this._printCardsInGame();
-		this._printChanceToHaveCardArray();
-		this._printPlayerHasColor();
+		// this._printCardsInGame();
+		// this._printChanceToHaveCardArray();
+		// this._printPlayerHasColor();
+		// this._printStich();
 	},
 	/**
 	 * initCardsInGame[color][number]
@@ -226,6 +175,14 @@ var ChanceCalc = {
 		}
 		return tmp;
 	},
+	_initStich: function() {
+		var tmp = new Array(9);
+		for (var i = tmp.length - 1; i >= 0; i--) {
+			tmp[i] = {};
+			tmp[i].playedCards = [];
+		}
+		return tmp;
+	},
 	_initArray: function(length, fillValue) {
 		return new Array(length).fill(fillValue);
 	},
@@ -269,6 +226,10 @@ var ChanceCalc = {
 			}
 		}
 	},
+	_setPlayerPosForCurrentStich: function() {
+		var playerPosForCurrentStich = ((this.stich[this.stichCount]) && (this.stich[this.stichCount].playedCards)) ? this.stich[this.stichCount].playedCards.length : 0;
+		this.stich[this.stichCount].playerPos = playerPosForCurrentStich;
+	},
 	_recalculateChanceToHaveCard: function() {
 		for (var c = 0; c < 4; c++) { // color index
 			for (var n = 6; n < 15; n++) { // card number
@@ -306,6 +267,40 @@ var ChanceCalc = {
 		console.log('\t\##### - PLAYER HAS COLOR');
 		for (var i = 0; i < this.playerHasColor.length; i++) {
 			console.log('\t' + JSON.stringify(this.playerHasColor[i]));
+		}
+	},
+	_printStich: function() {
+		console.log('\t\##### - STICH');
+		for (var i = 0; i < this.stich.length; i++) {
+			console.log('\t' + JSON.stringify(this.stich[i]));
+		}
+	},
+	_trackNewlyPlayedCards: function(gameType) {
+		var trumpfColor = (gameType.mode === 'TRUMPF') ? gameType.color : '';
+		for (var s = 0; s < this.stich.length; s++) { // stich 
+			// if the playerPos is assigned
+			if (this.stich[s].playerPos) {
+				for (var pc = 0; pc < this.stich[s].playedCards.length; pc++) { // played Cards
+					var cardToEval = this.stich[s].playedCards[pc] // iteration over playedCards in stich
+
+					// didn't play trumpf
+					if (cardToEval.color !== trumpfColor) {
+						// but trumpf is leadColor => MARK 'has no trumpf'
+						if (this.stich[s].leadColor === trumpfColor) {
+							this.markPlayerHasNoCardsOfColor(((this.stich[s].playerPos * 3 + pc) % 4), trumpfColor);
+						// and leadColor isn't trumpf either
+						} else {
+							// but played neither leadColor nor trumpf => MARK 'has no leadColor'
+							if (cardToEval.color !== this.stich[s].leadColor) {
+								this.markPlayerHasNoCardsOfColor(((this.stich[s].playerPos * 3 + pc) % 4), this.stich[s].leadColor);
+							}
+						}
+					}
+
+					// makes sure that the corresponding player gets marked as having played this card
+					this.setHasCard(cardToEval, ((this.stich[s].playerPos * 3 + pc) % 4), 0);
+				}
+			}
 		}
 	}
 };

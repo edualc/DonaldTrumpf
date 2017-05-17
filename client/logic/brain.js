@@ -244,14 +244,14 @@ let Brain = {
                     // Someone already played before me
                     } else {
                         // Angespielte Farbe
-                        let leadColor = tableCards[0].color;
+                        // let leadColor = this.stichCards[0].color;
 
                         let highestCard = validCards[0];
                         let lowestCard = validCards[0];
 
                         let self = this;
                         for (var i = validCards.length - 1; i >= 0; i--) {
-                            if (self._cardPriority(validCards[i], leadColor, self.gameType) > self._cardPriority(highestCard, leadColor, self.gameType)) {
+                            if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) > self._cardPriority(highestCard, validCards[i].color, self.gameType)) {
                                 highestCard = validCards[i];
                             }
                             // TODO: Wieso ist hier validCards[i] besser als v0.1, mit leadColor (was an sich logischer wäre) schlechter?
@@ -322,6 +322,7 @@ let Brain = {
         this.trumpfCount = 0;
         this.hadTrumpfInLastStich = true;
         this.stichCount = 0;
+        this.stichCards = new Array;
 
         // RESET chanceCalc
         this.chanceCalc = null;
@@ -331,9 +332,9 @@ let Brain = {
     // this method handles statistics and counters for cards played in this game
     // and add :lastPlayedCard to the already played cards
     registerCardWasPlayed: function(lastPlayedCard, playedCards) {
-        this.chanceCalc.registerCardWasPlayed(lastPlayedCard, playedCards);
-        
         this.stichCards = playedCards;
+        
+        this.chanceCalc.registerCardWasPlayed(lastPlayedCard, playedCards, this.stichCount, this.stichCards);
 
         this.playedCards.push(lastPlayedCard);
         if (this._isTrumpf(lastPlayedCard, this.gameType)) {
@@ -355,7 +356,7 @@ let Brain = {
     // this method keeps track of the current stich.
     registerStichCompleted: function(data) {
         this.stichCount += 1;
-        this.stichCards = [];
+        this.stichCards = new Array(4);
 
         this.chanceCalc.registerStichCompleted(data);
     },
