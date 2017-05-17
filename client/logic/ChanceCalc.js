@@ -68,7 +68,7 @@ var ChanceCalc = {
 	},
 	// is being called from brain.registerCardWasPlayer()
 	// PLAYED_CARDS
-	registerCardWasPlayed: function(lastPlayedCard, playedCards, stichCount, stichCards) {
+	registerCardWasPlayed: function(lastPlayedCard, playedCards, stichCount) {
 		// mark card as played in the current stich
 		this.setCardInGame(lastPlayedCard, 'x');
 

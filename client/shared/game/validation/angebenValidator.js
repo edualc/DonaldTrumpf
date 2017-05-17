@@ -20,7 +20,7 @@ const AngebenValidator = {
             return false;
         };
 
-        if (validationParameter.cardToPlay.color === validationParameter.color) {
+        if (validationParameter.mode === GameMode.TRUMPF && validationParameter.cardToPlay.color === validationParameter.color) {
             return validationSuccess;
         }
 

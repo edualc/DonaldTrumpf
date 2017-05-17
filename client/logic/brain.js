@@ -243,9 +243,6 @@ let Brain = {
 
                     // Someone already played before me
                     } else {
-                        // Angespielte Farbe
-                        // let leadColor = this.stichCards[0].color;
-
                         let highestCard = validCards[0];
                         let lowestCard = validCards[0];
 
@@ -334,7 +331,7 @@ let Brain = {
     registerCardWasPlayed: function(lastPlayedCard, playedCards) {
         this.stichCards = playedCards;
         
-        this.chanceCalc.registerCardWasPlayed(lastPlayedCard, playedCards, this.stichCount, this.stichCards);
+        this.chanceCalc.registerCardWasPlayed(lastPlayedCard, playedCards, this.stichCount);
 
         this.playedCards.push(lastPlayedCard);
         if (this._isTrumpf(lastPlayedCard, this.gameType)) {
