@@ -108,6 +108,7 @@ var ChanceCalc = {
 		// adjust arrays before recalculating
 		this._adjustChanceToHaveCardAccordingToPlayerHasColorChanges();
 		this._setPlayerHasColorToZeroWhenAllCardsOfColorArePlayed();
+		this._adjustPlayerHasColorAccordingToChanceToHaveCardChanges();
 
 		// recalculate
 		this._recalculateChanceToHaveCard();
@@ -237,6 +238,24 @@ var ChanceCalc = {
 			for (var p = 0; p < this.playerHasColor.length; p++) { // player index
 				if (this.playerHasColor[p][c] === 0) {
 					this.chanceToHaveCard[p][c] = new Array(15).fill(0);
+				}
+			}
+		}
+	},
+	// As soon as a player has no cards of a particular color, change his
+	// playerHasColor value to zero
+	_adjustPlayerHasColorAccordingToChanceToHaveCardChanges: function() {
+		for (var p = 0; p < 4; p++) { // player index
+			for (var c = 0; c < 4; c++) { // color index
+				var needsToChange = true;
+				for (var n = 6; n < 15; n++) { // card number
+					if (this.chanceToHaveCard[p][c][n] > 0) {
+						needsToChange = false;
+						break;
+					}
+				}
+				if (needsToChange) {
+					this.playerHasColor[p][c] = 0;
 				}
 			}
 		}

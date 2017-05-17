@@ -262,8 +262,7 @@ let Brain = {
 
                         // Falls der Stich bereits uns gehört, spiele die schlechteste Karte
                         // TESTED: ist sinnvoll
-                        // return stichIsOurs ? lowestCard : highestCard;
-                        return highestCard;
+                        return stichIsOurs ? lowestCard : highestCard;
                     }
                 }
 
@@ -421,6 +420,19 @@ let Brain = {
                 } else {
                     return false;
                 }
+        }
+    },
+    // TODO: lehmacl1 => FIX ChanceCalc first!
+    _calculateChanceOfStichSuccess: function(leadColor, cardToBePlayed) {
+        switch (this.stichCards.length) {
+            case 0:
+            case 1:
+                return false;
+            case 2:
+                return false;
+            break;
+            case 3:
+                return false;
         }
     },
     // Zustand des aktuellen Spiels
