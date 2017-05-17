@@ -338,14 +338,6 @@ let Brain = {
             this.trumpfCount += 1;
         }
 
-        this.chanceCalc.cardsToTrack.push({
-            card: lastPlayedCard,
-            leadColor: playedCards[0].color,
-            trumpfColor: (this.gameType.mode === 'TRUMPF') ? this.gameType.trumpfColor : false,
-            player: (this.justPlayedACard) ? 0 : 'x',
-            stichCount: this.stichCount
-        });
-
         if (this.justPlayedACard) {
             this.justPlayedACard = false;
         }
