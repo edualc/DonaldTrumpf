@@ -164,9 +164,9 @@ var ChanceCalc = {
 						this.markPlayerHasNoCardsOfColor(((this.playerId + 3 + (3 * i)) % 4), this.cardsToTrack[i].leadColor);
 					}
 				}
-			} 
+			}
 		}
-		
+
 		for (var i = this.cardsToTrack.length - 1; i >= 0; i--) {
 			this.cardsToTrack.pop();
 		}

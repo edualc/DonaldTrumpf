@@ -35,6 +35,7 @@ let UndeufePriority =   [0,0,0,0,0,0,  9, 8, 7, 6, 5, 4, 3, 2, 1];
 
 let Brain = {
     geschoben: false,
+    justPlayedACard: false,
     hadTrumpfInLastStich: true, // shows if the opposing team had given trumpf in the last stich (is used for re-trumpf'ing)
     playedCards: [], // already played cards in the current game
     stichCards: [], // cards that are in the current stich
@@ -230,21 +231,15 @@ let Brain = {
                     // I am first to play this stich
                     if (this.stichCards.length === 0) {
                         let highestCard = validCards[0];
-                        let lowestCard = validCards[0];
 
                         let self = this;
                         for (var i = validCards.length - 1; i >= 0; i--) {
                             if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) > self._cardPriority(highestCard, highestCard.color, self.gameType)) {
                                 highestCard = validCards[i];
                             }
-                            if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) < self._cardPriority(lowestCard, lowestCard.color, self.gameType)) {
-                                lowestCard = validCards[i];
-                            }
                         }
 
-                        // Falls der Stich bereits uns gehört, spiele die schlechteste Karte
-                        // TESTED: ist sinnvoll
-                        return stichIsOurs ? lowestCard : highestCard;
+                        return highestCard;
 
                     // Someone already played before me
                     } else {
@@ -267,7 +262,8 @@ let Brain = {
 
                         // Falls der Stich bereits uns gehört, spiele die schlechteste Karte
                         // TESTED: ist sinnvoll
-                        return stichIsOurs ? lowestCard : highestCard;
+                        // return stichIsOurs ? lowestCard : highestCard;
+                        return highestCard;
                     }
                 }
 
@@ -307,6 +303,8 @@ let Brain = {
         // 6. If I can't play the correct color and don't want to use a TRUMPF, what color can i 
         // give to tell my other bot instance which color I'd like him to play?
         
+        this.justPlayedACard = true;
+
         return validCards[0]; // Just take the first valid card (you should not get here)
     },
     // skeleton method: returns valid cards to be played
@@ -346,8 +344,14 @@ let Brain = {
         this.chanceCalc.cardsToTrack.push({
             card: lastPlayedCard,
             leadColor: playedCards[0].color,
-            trumpfColor: (this.gameType.mode === 'TRUMPF') ? this.gameType.trumpfColor : false
+            trumpfColor: (this.gameType.mode === 'TRUMPF') ? this.gameType.trumpfColor : false,
+            player: (this.justPlayedACard) ? 0 : 'x',
+            stichCount: this.stichCount
         });
+
+        if (this.justPlayedACard) {
+            this.justPlayedACard = false;
+        }
     },
     // this method keeps track of the current stich.
     registerStichCompleted: function(data) {
