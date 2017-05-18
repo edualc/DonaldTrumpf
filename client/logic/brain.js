@@ -35,6 +35,7 @@ let UndeufePriority =   [0,0,0,0,0,0,  9, 8, 7, 6, 5, 4, 3, 2, 1];
 
 let Brain = {
     geschoben: false,
+    justPlayedACard: false,
     hadTrumpfInLastStich: true, // shows if the opposing team had given trumpf in the last stich (is used for re-trumpf'ing)
     playedCards: [], // already played cards in the current game
     stichCards: [], // cards that are in the current stich
@@ -48,154 +49,108 @@ let Brain = {
         
         // Evaluate different options for own cards
         // 1. Which is best for my cards (done)
-        // 2. Which is best for my non-trumpf/obeabe/undeufe cards (done)
+        // 2. Which is best for my non-trumpf/obeabe/undeufe cards
+        // 3. Which is statistically best for my other bot instance
         var topGameType;
         var topGameTypeWeight = 0;
 
         this._printHandcards(handcards);
 
-        let cardColors = ["HEARTS", "DIAMONDS", "CLUBS", "SPADES"];
-        let evaluationArray = [];
-        let mateEvaluationArray = [];
+        // declare arrays used
+        let cardColors = ["HEARTS", "DIAMONDS", "CLUBS", "SPADES"], evaluationArray = [];
+        // declare multiple variables used
+        let currentColorTrumpfWeight, currentColorTrumpfMateWeight, currentColorNonTrumpfWeight, currentColorNonTrumpfMateWeight, currentTrumpfCount, currentGameType, cardToEvaluate, chance;
 
-        let currentColorTrumpfWeight;
-        let currentColorNonTrumpfWeight;
-        let currentTrumpfCount;
-        let currentGameType;
+        // initialize a full deck;
+        var fullDeck = handcards[0].getFullDeck();
 
-        let cardToEvaluate;
-        let chance;
-
-
-        // TRUMPF evalaution
-        for (var i = cardColors.length - 1; i >= 0; i--) {
-            currentColorTrumpfWeight = 0;
-            currentColorNonTrumpfWeight = 0;
-            currentGameType = { mode: 'TRUMPF', trumpfColor: cardColors[i] };
-
-            for (var j = handcards.length - 1; j >= 0; j--) {
-                if (this._isTrumpf(handcards[j], currentGameType)) {
-                    currentColorTrumpfWeight += this._mapCardToWeight(handcards[j], currentGameType);
-                } else {
-                    currentColorNonTrumpfWeight += this._mapCardToWeight(handcards[j], currentGameType);
+        // TRUMPF evalaution (all 4 colors)
+        // ==========================================
+            for (var i = cardColors.length - 1; i >= 0; i--) { // color
+                currentColorTrumpfWeight = 0;
+                currentColorTrumpfMateWeight = 0;
+                currentColorNonTrumpfWeight = 0;
+                currentColorNonTrumpfMateWeight = 0;
+                currentGameType = { mode: 'TRUMPF', trumpfColor: cardColors[i] };
+                // evaluation for player
+                for (var j = handcards.length - 1; j >= 0; j--) {
+                    if (this._isTrumpf(handcards[j], currentGameType)) {
+                        currentColorTrumpfWeight += this._mapCardToWeight(handcards[j], currentGameType);
+                    } else {
+                        currentColorNonTrumpfWeight += this._mapCardToWeight(handcards[j], currentGameType);
+                    }
                 }
+                // evaluation for mate(s)
+                for (var h = fullDeck.length - 1; h >= 0; h--) {
+                    cardToEvaluate = fullDeck[h];
+                    chance = this.chanceCalc.getChanceToHaveCard(cardToEvaluate, 1); // index 1,2 or 3 works, just NOT 0
+
+                    if (this._isTrumpf(cardToEvaluate, currentGameType)) {
+                        currentColorTrumpfMateWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
+                    } else {
+                        currentColorNonTrumpfMateWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
+                    }
+                }
+                // summary for the current color evaluation
+                let trumpfWeight = (((currentColorTrumpfWeight) * 1.2 + (currentColorNonTrumpfWeight / 3) * 0.8) * 2);
+                let trumpfMateWeight = (((currentColorTrumpfMateWeight) * 1.2 + (currentColorNonTrumpfMateWeight / 3) * 0.8) * 2);
+                evaluationArray.push({ weight: trumpfWeight - trumpfMateWeight, playerWeight: trumpfWeight, mateWeight: trumpfMateWeight, mode: 'TRUMPF', color: cardColors[i] });
             }
 
-            // summary for the current color evaluation
-            evaluationArray.push({ weight: (((currentColorTrumpfWeight) * 1.2 + (currentColorNonTrumpfWeight / 3) * 0.8) * 2), color: cardColors[i], mode: 'TRUMPF' });
-        }
-
-
         // OBEABE evaluation
-        currentGameType = { mode: 'OBEABE' };
-        let obeabeWeight = 0;
-
-        for (var i = handcards.length - 1; i >= 0; i--) {
-            obeabeWeight += this._mapCardToWeight(handcards[i], currentGameType);
-        }
-        evaluationArray.push({ weight: obeabeWeight, mode: 'OBEABE', color: 'HEARTS' });
-
+        // ==========================================
+            currentGameType = { mode: 'OBEABE' };
+            let obeabeWeight = 0;
+            let obeabeMateWeight = 0;
+            // evaluation for player
+            for (var i = handcards.length - 1; i >= 0; i--) {
+                obeabeWeight += this._mapCardToWeight(handcards[i], currentGameType);
+            }
+            // evaluation for mate(s)
+            for (var i = fullDeck.length - 1; i >= 0; i--) {
+                cardToEvaluate = fullDeck[i];
+                chance = this.chanceCalc.getChanceToHaveCard(cardToEvaluate, 1); // index 1,2 or 3 works, just NOT 0
+                obeabeMateWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
+            }
+            evaluationArray.push({ weight: obeabeWeight - obeabeMateWeight, playerWeight: obeabeWeight, mateWeight: obeabeMateWeight, mode: 'OBEABE', color: undefined });
 
         // UNDEUFE evaluation
-        currentGameType = { mode: 'UNDEUFE' };
-        let undeufeWeight = 0;
+        // ==========================================
+            currentGameType = { mode: 'UNDEUFE' };
+            let undeufeWeight = 0;
+            let undeufeMateWeight = 0;
+            // evaluation for player
+            for (var i = handcards.length - 1; i >= 0; i--) {
+                undeufeWeight += this._mapCardToWeight(handcards[i], currentGameType);
+            }
+            // evaluation for mate(s)
+            for (var i = fullDeck.length - 1; i >= 0; i--) {
+                cardToEvaluate = fullDeck[i];
+                chance = this.chanceCalc.getChanceToHaveCard(cardToEvaluate, 1); // index 1,2 or 3 works, just NOT 0
+                undeufeMateWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
+            }
+            evaluationArray.push({ weight: undeufeWeight - undeufeMateWeight, playerWeight: undeufeWeight, mateWeight: undeufeMateWeight, mode: 'UNDEUFE', color: undefined });
 
-        for (var i = handcards.length - 1; i >= 0; i--) {
-            undeufeWeight += this._mapCardToWeight(handcards[i], currentGameType);
-        }
-        evaluationArray.push({ weight: undeufeWeight, mode: 'UNDEUFE', color: 'HEARTS' });
-
-
-        // ITERATE TO FIND MAX
+        // evaluationArray evaluation to find best mode
+        // ==========================================
         console.log('---###---');
         let bestMode = evaluationArray[0];
         for (var i = evaluationArray.length - 1; i >= 0; i--) {
-            console.log("weight:\t" + parseFloat(evaluationArray[i].weight).toFixed(2) + "\tmode:\t" + evaluationArray[i].mode + "\tcolor:\t" + evaluationArray[i].color)
+            console.log(
+                "weight:\t" + parseFloat(evaluationArray[i].weight).toFixed(2) + 
+                "\tplayerWeight:\t" + parseFloat(evaluationArray[i].playerWeight).toFixed(2) + 
+                "\tmateWeight:\t" + parseFloat(evaluationArray[i].mateWeight).toFixed(2) + 
+                "\tmode:\t" + evaluationArray[i].mode + 
+                "\tcolor:\t" + evaluationArray[i].color
+            );
             if (evaluationArray[i].weight >= bestMode.weight) {
                 bestMode = evaluationArray[i];
             }
         }
         console.log('---###---');
 
-
-
-
-
-
-        // 3. Which is statistically best for my other bot instance
-        var fullDeck = handcards[0].getFullDeck();
-
-        // TRUMPF evalaution
-        for (var i = cardColors.length - 1; i >= 0; i--) {
-            currentColorTrumpfWeight = 0;
-            currentColorNonTrumpfWeight = 0;
-            currentGameType = { mode: 'TRUMPF', trumpfColor: cardColors[i] };
-
-            for (var h = fullDeck.length - 1; h >= 0; h--) {
-                cardToEvaluate = fullDeck[h];
-                chance = this.chanceCalc.getChanceToHaveCard(cardToEvaluate, 1); // index 1,2 or 3 works, just NOT 0
-
-                if (this._isTrumpf(cardToEvaluate, currentGameType)) {
-                    currentColorTrumpfWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
-                } else {
-                    currentColorNonTrumpfWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
-                }
-            }
-            // summary for the current color evaluation
-            mateEvaluationArray.push({ weight: (((currentColorTrumpfWeight) * 1.2 + (currentColorNonTrumpfWeight / 3) * 0.8) * 2), color: cardColors[i], mode: 'TRUMPF' });
-        }
-
-
-        // OBEABE evaluation
-        currentGameType = { mode: 'OBEABE' };
-        obeabeWeight = 0;
-
-        for (var i = fullDeck.length - 1; i >= 0; i--) {
-            cardToEvaluate = fullDeck[i];
-            chance = this.chanceCalc.getChanceToHaveCard(cardToEvaluate, 1); // index 1,2 or 3 works, just NOT 0
-            obeabeWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
-        }
-        mateEvaluationArray.push({ weight: obeabeWeight, mode: 'OBEABE', color: 'HEARTS' });
-
-
-        // UNDEUFE evaluation
-        currentGameType = { mode: 'UNDEUFE' };
-        undeufeWeight = 0;
-
-        for (var i = fullDeck.length - 1; i >= 0; i--) {
-            cardToEvaluate = fullDeck[i];
-            chance = this.chanceCalc.getChanceToHaveCard(cardToEvaluate, 1); // index 1,2 or 3 works, just NOT 0
-            undeufeWeight += (this._mapCardToWeight(cardToEvaluate, currentGameType) * chance);
-        }
-        mateEvaluationArray.push({ weight: undeufeWeight, mode: 'UNDEUFE', color: 'HEARTS' });
-
-
-        // ITERATE TO FIND MAX
-        console.log('---###---');
-        let mateBestMode = mateEvaluationArray[0];
-        for (var i = mateEvaluationArray.length - 1; i >= 0; i--) {
-            console.log("weight:\t" + parseFloat(mateEvaluationArray[i].weight).toFixed(2) + "\tmode:\t" + mateEvaluationArray[i].mode + "\tcolor:\t" + evaluationArray[i].color)
-            if (mateEvaluationArray[i].weight >= mateBestMode.weight) {
-                mateBestMode = mateEvaluationArray[i];
-            }
-        }
-        console.log('---###---');
-
-
-
-
-        // TODO:
-        // Evaluation between "own" cards, "mate" cards and "enemy" cards
-
-
-
-
-
-
-
-
         // Set gameType according to evaluation above
-        let gameType = { "mode": bestMode.mode, "trumpfColor": bestMode.color };
+        let gameType = { "mode": bestMode.mode, "trumpfColor": (bestMode.mode === 'TRUMPF') ? bestMode.color : undefined };
         return gameType;
     },
     gameMode: function (gameType) {
@@ -276,33 +231,24 @@ let Brain = {
                     // I am first to play this stich
                     if (this.stichCards.length === 0) {
                         let highestCard = validCards[0];
-                        let lowestCard = validCards[0];
 
                         let self = this;
                         for (var i = validCards.length - 1; i >= 0; i--) {
                             if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) > self._cardPriority(highestCard, highestCard.color, self.gameType)) {
                                 highestCard = validCards[i];
                             }
-                            if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) < self._cardPriority(lowestCard, lowestCard.color, self.gameType)) {
-                                lowestCard = validCards[i];
-                            }
                         }
 
-                        // Falls der Stich bereits uns gehört, spiele die schlechteste Karte
-                        // TESTED: ist sinnvoll
-                        return stichIsOurs ? lowestCard : highestCard;
+                        return highestCard;
 
                     // Someone already played before me
                     } else {
-                        // Angespielte Farbe
-                        let leadColor = tableCards[0].color;
-
                         let highestCard = validCards[0];
                         let lowestCard = validCards[0];
 
                         let self = this;
                         for (var i = validCards.length - 1; i >= 0; i--) {
-                            if (self._cardPriority(validCards[i], leadColor, self.gameType) > self._cardPriority(highestCard, leadColor, self.gameType)) {
+                            if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) > self._cardPriority(highestCard, validCards[i].color, self.gameType)) {
                                 highestCard = validCards[i];
                             }
                             // TODO: Wieso ist hier validCards[i] besser als v0.1, mit leadColor (was an sich logischer wäre) schlechter?
@@ -353,6 +299,8 @@ let Brain = {
         // 6. If I can't play the correct color and don't want to use a TRUMPF, what color can i 
         // give to tell my other bot instance which color I'd like him to play?
         
+        this.justPlayedACard = true;
+
         return validCards[0]; // Just take the first valid card (you should not get here)
     },
     // skeleton method: returns valid cards to be played
@@ -371,6 +319,7 @@ let Brain = {
         this.trumpfCount = 0;
         this.hadTrumpfInLastStich = true;
         this.stichCount = 0;
+        this.stichCards = new Array;
 
         // RESET chanceCalc
         this.chanceCalc = null;
@@ -380,19 +329,25 @@ let Brain = {
     // this method handles statistics and counters for cards played in this game
     // and add :lastPlayedCard to the already played cards
     registerCardWasPlayed: function(lastPlayedCard, playedCards) {
-        this.chanceCalc.registerCardWasPlayed(lastPlayedCard, playedCards);
-        
         this.stichCards = playedCards;
+        
+        this.chanceCalc.registerCardWasPlayed(lastPlayedCard, playedCards, this.stichCount);
 
         this.playedCards.push(lastPlayedCard);
         if (this._isTrumpf(lastPlayedCard, this.gameType)) {
             this.trumpfCount += 1;
         }
+
+        if (this.justPlayedACard) {
+            this.justPlayedACard = false;
+        }
     },
     // this method keeps track of the current stich.
-    registerStichCompleted: function() {
+    registerStichCompleted: function(data) {
         this.stichCount += 1;
-        this.stichCards = [];
+        this.stichCards = new Array(4);
+
+        this.chanceCalc.registerStichCompleted(data);
     },
     // skeleton method
     setValidation: function (gameMode, trumpfColor) {
@@ -400,7 +355,7 @@ let Brain = {
     },
     // Gives the current table and handcards to the chanceCalc
     updateChanceCalc: function(handcards, tableCards) {
-        this.chanceCalc.update(handcards, tableCards);
+        this.chanceCalc.update(handcards, tableCards, this.gameType);
     },
     // Retourniert die Stärke einer Karte bzgl. einer angespielten Farbe :leadColor
     // Zum Beispiel hat leadColor-Ass einen Wert von 9, eine Trumpf-6 hat aber eine 11
@@ -455,6 +410,19 @@ let Brain = {
                 } else {
                     return false;
                 }
+        }
+    },
+    // TODO: lehmacl1 => FIX ChanceCalc first!
+    _calculateChanceOfStichSuccess: function(leadColor, cardToBePlayed) {
+        switch (this.stichCards.length) {
+            case 0:
+            case 1:
+                return false;
+            case 2:
+                return false;
+            break;
+            case 3:
+                return false;
         }
     },
     // Zustand des aktuellen Spiels
