@@ -1,21 +1,25 @@
 export class IStrategy {
 	constructor(){
-		if (new.target === IStrategy){
-			throw new TypeError("Cannot construct Abstract instances directly");
+		if (this.posAdditionalBockCount === undefined){
+			throw new TypeError("Must ovverride method");
 		}
-		if (this.bockCount === undefined){
+		if (this.FailureChance === undefined){
+			throw new TypeError("Must ovverride method");
+		}
+		if (this.FailureImpact === undefined){
+			throw new TypeError("Must ovverride method");
+		}
+		if (this.EstimatePointsYouGet === undefined){
+			throw new TypeError("Must ovverride method");
+		}
+		if (this.NumberOfTurns === undefined){
 			throw new TypeError("Must ovverride method");
 		}
 	}
-}
-
-export class ObeabeStrategy extends IStrategy {
-	constructor() {
-		super();
-	}
 
 	bockCount(){
-		return this.bockCount;
+
 	}
 
 }
+
