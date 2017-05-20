@@ -8,9 +8,9 @@ let Validation = require('../shared/validation/validation');
 let Card = require('./../shared/deck/card');
 let ChanceCalc = require('./ChanceCalc');
 
-import { StrategyFactory } from './strategy/StrategyFactory';
+// import { StrategyFactory } from './strategy/StrategyFactory';
 
-let strategies = new StrategyFactory().getStrategies();
+// let strategies = new StrategyFactory().getStrategies();
 
 // TODO: Evaluierungsstatistik mitführen
 let CurrentColorWeights = { color: '', count: 0, trumpfWeight: 0, nonTrumpfWeight: 0 };

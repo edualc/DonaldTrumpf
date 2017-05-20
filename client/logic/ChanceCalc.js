@@ -107,9 +107,11 @@ var ChanceCalc = {
 	},
 	triggerChanceCalculation: function() {
 		// adjust arrays before recalculating
+		this._adjustChanceToHaveCardAccordingToCardsInGame();
 		this._adjustChanceToHaveCardAccordingToPlayerHasColorChanges();
 		this._setPlayerHasColorToZeroWhenAllCardsOfColorArePlayed();
 		this._adjustPlayerHasColorAccordingToChanceToHaveCardChanges();
+		this._adjustChanceToHaveCardAccordingToPlayerHasColorChanges();
 
 		// recalculate
 		this._recalculateChanceToHaveCard();
@@ -123,10 +125,10 @@ var ChanceCalc = {
 		// triggers a new calculation for the chanceToHaveCard array
 		this.triggerChanceCalculation();
 
-		// this._printCardsInGame();
-		// this._printChanceToHaveCardArray();
-		// this._printPlayerHasColor();
-		// this._printStich();
+		this._printCardsInGame();
+		this._printChanceToHaveCardArray();
+		this._printPlayerHasColor();
+		this._printStich();
 	},
 	/**
 	 * initCardsInGame[color][number]
@@ -195,6 +197,20 @@ var ChanceCalc = {
 			for (var p = 0; p < this.playerHasColor.length; p++) { // player index
 				if (this.playerHasColor[p][c] === 0) {
 					this.chanceToHaveCard[p][c] = new Array(15).fill(0);
+				}
+			}
+		}
+	},
+	_adjustChanceToHaveCardAccordingToCardsInGame: function() {
+		for (var n = 6; n < 15; n++) { // card number
+			for (var c = 0; c < 4; c++) { // color index
+				if (this.cardsInGame[c][n] === 0) {
+					// do nothing, as this card is still in the game
+				} else {
+					// card has been played, make sure its chance is 0 for all players
+					for (var p = 0; p < 4; p++) {
+						this.chanceToHaveCard[p][c][n] = 0;
+					}
 				}
 			}
 		}
