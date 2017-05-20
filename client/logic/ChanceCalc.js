@@ -9,7 +9,7 @@ var Colors = [
 ];
 
 var ChanceCalc = {
-	cardsInGame: [], // cardsInGame[playerId][color][number]
+	cardsInGame: [], // cardsInGame[color][number]
 	cardsOfColorPlayed: [], // cardsOfColorPlayer[color]
 	chanceToHaveCard: [], // chanceToHaveCard[playerId][color][number]
 	gameType: {},
@@ -32,10 +32,9 @@ var ChanceCalc = {
 		for (var i = handcards.length - 1; i >= 0; i--) {
 			this.setHasCard(handcards[i], 0, 1);
 		}
-
-		console.log('INITIALIZED!');
-		this._printPlayerHasColor();
-
+	},
+	cardWasPlayed: function(card) {
+		return (this.cardsInGame[card.color][card.number] !== 0);
 	},
 	setCardInGame: function(card, value) {
 		this.cardsInGame[this.mapCardToColorIndex(card)][card.number] = value;
@@ -55,11 +54,30 @@ var ChanceCalc = {
 	getChanceToHaveCard: function(card, playerId) {
 		return this.chanceToHaveCard[playerId][this.mapCardToColorIndex(card)][card.number];
 	},
+	getChanceToHaveCardInDeck: function(card, playerId, cardAmount) {
+		var cardChance = this.getChanceToHaveCard(card, playerId);
+		var playerTotalChances = 0;
+
+		for (var n = 6; n < 15; n++) {
+			playerTotalChances += this.chanceToHaveCard[playerId][this.mapCardToColorIndex(card)][n];
+		}
+
+    var chanceToHaveThisCard = cardAmount * cardChance / playerTotalChances;
+    console.log('\t\t #### getChanceToHaveCardInDeck #### chance to have:' + card + '\n is: \t' + chanceToHaveThisCard);
+
+    return chanceToHaveThisCard;
+	},
+	getPlayerHasCardsOfColor: function(playerId, color) {
+		return (this.playerHasColor[playerId][this.mapColorToColorIndex(color)] === 1) ? true : false;
+	},
 	mapCardToColorIndex: function(card) {
 		return Colors.indexOf(card.color);
 	},
 	mapColorToColorIndex: function(color) {
 		return Colors.indexOf(color);
+	},
+	mapColorIndexToColor: function(index) {
+		return Colors[index];
 	},
 	// mark player (:playerId) as he has no cards of :color left
 	markPlayerHasNoCardsOfColor: function(playerId, color) {
@@ -318,6 +336,16 @@ var ChanceCalc = {
 				}
 			}
 		}
+	},
+	_trumpfCountForPlayer: function(trumpfColor) {
+		var trumpfColorIndex = this.mapColorToColorIndex(trumpfColor);
+		var tmpCount = 0;
+
+		for (var n = 6; n < 15; n++) {
+			tmpCount += this.chanceToHaveCard[0][trumpfColorIndex][n];
+		}
+
+		return tmpCount;
 	}
 };
 
