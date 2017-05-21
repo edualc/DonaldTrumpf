@@ -189,102 +189,6 @@ let Brain = {
 
         console.log("-----\r\n###### Ist der Stich uns? " + stichIsOurs + "\r\n-----");
 
-        // /**
-        //  * OLD IMPLEMENTATION
-        //  */
-        // // differentiate between the different gamemodes
-        // switch (this.gameType.mode) {
-        //     case 'TRUMPF':
-        //         let trumpfBuur = Card.create(11, this._curTrumpfColor());
-        //         let trumpfNell = Card.create(9, this._curTrumpfColor());
-        //         let trumpfAss = Card.create(14, this._curTrumpfColor());
-
-        //         // First stich: Who has Trumpf?
-        //         // (If first stich and this instance just chose Trumpf)
-        //         if ((this.stichCount === 0) && (this.stichCards.length === 0)) {
-        //             // If you have both Nell + Ass, play Ass
-        //             if ((validCards.indexOf(trumpfNell) >= 0) && (validCards.indexOf(trumpfAss) >= 0)) {
-        //                 return trumpfAss;
-        //             }
-        //             // If you have both Buur + Ass, play Ass
-        //             if ((validCards.indexOf(trumpfAss) >= 0) && (validCards.indexOf(trumpfBuur) >= 0)) {
-        //                 return trumpfAss;
-        //             }
-        //             // If you have both Buur + Nell, play Nell
-        //             if ((validCards.indexOf(trumpfNell) >= 0) && (validCards.indexOf(trumpfBuur) >= 0)) {
-        //                 return trumpfNell;
-        //             }
-
-        //             // What Trumpf Cards do I have?
-        //             let self = this;
-        //             let currentTrumpfCards = [];
-        //             currentTrumpfCards = validCards.filter(
-        //                 function(c) {
-        //                     return self._isTrumpf(c, self.gameType);
-        //                 }, this
-        //             );
-
-        //             let highestTrumpf = currentTrumpfCards[0];
-
-        //             for (var i = currentTrumpfCards.length - 1; i >= 0; i--) {
-        //                 if (self._cardPriority(currentTrumpfCards[i], currentTrumpfCards[i].color, self.gameType) > self._cardPriority(highestTrumpf, highestTrumpf.color, self.gameType)) {
-        //                     highestTrumpf = currentTrumpfCards[i];
-        //                 }
-        //             }
-
-        //             // Play highest Trumpf in the beginning to draw them out.
-        //             return highestTrumpf;
-        //         // Any Stich where this instance didn't make trumpf or it isn't the first stich
-        //         } else {
-        //             // I am first to play this stich
-        //             if (this.stichCards.length === 0) {
-        //                 let highestCard = validCards[0];
-
-        //                 let self = this;
-        //                 for (var i = validCards.length - 1; i >= 0; i--) {
-        //                     if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) > self._cardPriority(highestCard, highestCard.color, self.gameType)) {
-        //                         highestCard = validCards[i];
-        //                     }
-        //                 }
-
-        //                 return highestCard;
-
-        //             // Someone already played before me
-        //             } else {
-        //                 let highestCard = validCards[0];
-        //                 let lowestCard = validCards[0];
-
-        //                 let self = this;
-        //                 for (var i = validCards.length - 1; i >= 0; i--) {
-        //                     if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) > self._cardPriority(highestCard, validCards[i].color, self.gameType)) {
-        //                         highestCard = validCards[i];
-        //                     }
-        //                     // TODO: Wieso ist hier validCards[i] besser als v0.1, mit leadColor (was an sich logischer wäre) schlechter?
-        //                     if (self._cardPriority(validCards[i], validCards[i].color, self.gameType) < self._cardPriority(lowestCard, validCards[i].color, self.gameType)) {
-        //                         lowestCard = validCards[i];
-        //                     }
-        //                 }
-
-        //                 // Falls der Stich bereits uns gehört, spiele die schlechteste Karte
-        //                 // TESTED: ist sinnvoll
-        //                 return stichIsOurs ? lowestCard : highestCard;
-        //             }
-        //         }
-
-        //     break;
-        //     case 'OBEABE':
-        //     case 'UNDEUFE':
-        //         // For now, just play the highest card possible
-        //         let highestCard = validCards[0];
-        //         // compare all the valid cards for their priority and pick one the highest card
-        //         for (var i = validCards.length - 1; i >= 0; i--) {
-        //             if (this._cardPriority(validCards[i], validCards[i].color, this.gameType) > this._cardPriority(highestCard, highestCard.color, this.gameType)) {
-        //                 highestCard = validCards[i];
-        //             }
-        //         }
-        //         return highestCard;
-        // }
-
         switch (this.gameType.mode) {
             case 'TRUMPF':
                 // =================================================================================
@@ -449,21 +353,17 @@ let Brain = {
      * the cards that might be played by player :playerId
      */
     _checkCurrentStichOwnershipChance: function(validCards, tableCards, playerId) {
-
         console.log('################################################\n################################################\n################################################\n'
             + '\n alidCards: \t' + JSON.stringify(validCards) 
             + '\n tableCards: \t' + JSON.stringify(tableCards) 
             + '\n playerId: \t' + playerId);
 
-        var chanceForOtherPlayerToBeatMyCard = 1;
         var highestCard = validCards[0];
         var leadColor = tableCards[0].color;
         var stichIsOurs = false;
 
         if (tableCards.length === 1) {
-            // TODO
             highestCard = tableCards[0];
-            chanceForOtherPlayerToBeatMyCard = 1;
         }
 
         if (tableCards.length === 2) {
@@ -473,26 +373,26 @@ let Brain = {
             } else {
                 highestCard = tableCards[0];
             }
+        }
 
-            var tmpChances = 0;
-            for (var c = 0; c < 4; c ++) {
-                for (var n = 6; n < 15; n++) {
+        var tmpChances = 0;
+        for (var c = 0; c < 4; c ++) {
+            for (var n = 6; n < 15; n++) {
 
-                    // enemy player must have a chance to have the card in question
-                    if (this.chanceCalc.chanceToHaveCard[playerId][c][n] > 0) {
-                        var cardToCheck = Card.create(n , this.chanceCalc.mapColorIndexToColor(c));
+                // enemy player must have a chance to have the card in question
+                if (this.chanceCalc.chanceToHaveCard[playerId][c][n] > 0) {
+                    var cardToCheck = Card.create(n , this.chanceCalc.mapColorIndexToColor(c));
 
-                        // that card must beat the currently highest card
-                        if (this._cardPriority(cardToCheck, leadColor, this.gameType) > this._cardPriority(highestCard, leadColor, this.gameType)) {
-                            tmpChances += this.chanceCalc.getChanceToHaveCardInDeck(cardToCheck, playerId, 9 - this.stichCount + 1);
-                        }
+                    // that card must beat the currently highest card
+                    if (this._cardPriority(cardToCheck, leadColor, this.gameType) > this._cardPriority(highestCard, leadColor, this.gameType)) {
+                        tmpChances += this.chanceCalc.getChanceToHaveCardInDeck(cardToCheck, playerId, 9 - this.stichCount + 1);
                     }
                 }
             }
-
-            chanceForOtherPlayerToBeatMyCard = tmpChances;
         }
-        
+
+        chanceForOtherPlayerToBeatMyCard = tmpChances;
+    
         console.log('\t\t #### _checkCurrentStichOwnershipChance #### chance: ' + chanceForOtherPlayerToBeatMyCard);
 
         // TODO: adjust chance according to points / time
