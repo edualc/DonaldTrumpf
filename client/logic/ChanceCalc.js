@@ -63,7 +63,7 @@ var ChanceCalc = {
 		}
 
     var chanceToHaveThisCard = cardAmount * cardChance / playerTotalChances;
-    console.log('\t\t #### getChanceToHaveCardInDeck #### chance to have:' + card + '\n is: \t' + chanceToHaveThisCard);
+    console.log('\t\t #### getChanceToHaveCardInDeck #### chance to have:' + JSON.stringify(card) + ' is: \t' + JSON.stringify(chanceToHaveThisCard));
 
     return chanceToHaveThisCard;
 	},

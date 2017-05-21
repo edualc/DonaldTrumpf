@@ -318,6 +318,30 @@ let Brain = {
      * Check and return the card to be played, considering players :playerIdArray
      * chances.
      */
+    // _evaluatePotentialWinningStichCards: function(validCards, playerIdArray) {
+    //     let currentNonTrumpfCards = [];
+        
+    //     // which cards shall I play?
+    //     if (this.gameType.mode === 'TRUMPF') {
+    //         let self = this;
+    //         currentNonTrumpfCards = validCards.filter(
+    //             function(c) {
+    //                 return !self._isTrumpf(c, self.gameType);
+    //             }, this
+    //         );
+    //     }
+
+    //     // if not-trumpf or only trumpfs in hand
+    //     if (currentNonTrumpfCards.length < 1) {
+    //         currentNonTrumpfCards = validCards;
+    //     }
+
+    //     var cardToPlay = this._assignValidCardsToClass(validCards, currentNonTrumpfCards);
+
+    //     console.log('\t\t #### _evaluatePotentialWinningStichCards #### playing card: ' + JSON.stringify(cardToPlay));
+
+    //     return cardToPlay;
+    // },
     _evaluatePotentialWinningStichCards: function(validCards, playerIdArray) {
         let currentNonTrumpfCards = [];
         
@@ -349,15 +373,118 @@ let Brain = {
         return cardToPlay;
     },
     /**
+     * Go through validCards and check their card type/class
+     * (bock, trumpf, valuable, invaluable,..) and return a mapping array
+     *
+     * only 'bock' implemented
+     */
+    _assignValidCardsToClass: function(validCards, currentNonTrumpfCards) {
+        var validCardsAssignments = []; // [{ cards: [], priority: 0, count: 0 }, {...}]
+
+        for (var c = 0; c < 4; c++) {
+            for (var n = 14; n > 5; n--) {
+                // card has been played or player has the card himself
+                var tmpBockCardsOfAColor = [];
+                if ((this.chanceCalc.cardsInGame[c][n] !== 0) || (this.chanceCalc.chanceToHaveCard[0][c][n] === 1)) {
+                    // add as bock if player has the card
+                    var currentCardToEvaluate = Card.create(n, this.chanceCalc.mapColorIndexToColor(c));
+                    if (validCards.indexOf(currentCardToEvaluate) >= 0) {
+                        tmpBockCardsOfAColor.push(currentCardToEvaluate);
+                    }
+                }
+
+                if (tmpBockCardsOfAColor.length > 0) {
+                    validCardsAssignments[c] = { cards: tmpBockCardsOfAColor, count: tmpBockCardsOfAColor.length };
+                }
+            }
+        }
+
+        if (validCardsAssignments.length > 0) {
+            // prioritize colors according to other players
+            for (var i = validCardsAssignments.length - 1; i >= 0; i--) {
+                if (validCardsAssignments[i].count > 0) {
+                    if (validCardsAssignments[i].cards[0].color === this.gameType.trumpfColor) {
+                        validCardsAssignments[i].priority = 7;
+                    } else {
+                        // players 1 and 3 don't have this color
+                        if ((!this.chanceCalc.playerHasColor[1][i]) && (!this.chanceCalc.playerHasColor[3][i])) {
+                            validCardsAssignments[i].priority = (validCardsAssignments[i].count > 1) ? 1 : 4;
+                        // player 1 does not have this color
+                        } else if (!this.chanceCalc.playerHasColor[1][i]) {
+                            validCardsAssignments[i].priority = (validCardsAssignments[i].count > 1) ? 2 : 5;
+                        // player 3 does not have this color
+                        } else if (!this.chanceCalc.playerHasColor[3][i]) {
+                            validCardsAssignments[i].priority = (validCardsAssignments[i].count > 1) ? 3 : 6;
+                        }
+                    }
+                }
+            }
+
+            // find best color to play (According to priority from above)
+            var colorToPlayIndex = 0;
+            for (var i = validCardsAssignments.length - 1; i >= 0; i--) {
+                if (validCardsAssignments[i].priority < validCardsAssignments[colorToPlayIndex].priority) {
+                    colorToPlayIndex = i;
+                }
+            }
+
+            console.log('\t\t #### _assignValidCardsToClass ####' + JSON.stringify(validCardsAssignments) + '\n - best index: ' + colorToPlayIndex);
+            
+            // for obeabe/undeufe, play any bock of the prefered color
+            var cardToPlay = validCardsAssignments[colorToPlayIndex].cards[0];
+
+            // in case of trumpf, make sure you don't play a valuable
+            // card if there are still trumpfs in the game
+            if (this.gameType.mode === 'TRUMPF') {
+                var trumpfColor = this.gameType.trumpfColor;
+                
+                var trumpfColorCount = 0;
+                for (n = 6; n < 15; n++) {
+                    // multiple IF statement:
+                    // - the gard is still in the game
+                    // - the player does not own it itself
+                    // - the enemy team can still have trumpf color cards
+                    if ((this.chanceCalc.cardsInGame[this.chanceCalc.mapColorToColorIndex(trumpfColor)][n] === 0)
+                        && (this.chanceCalc.chanceToHaveCard[0][this.chanceCalc.mapColorToColorIndex(trumpfColor)][n] !== 1)
+                        && (this.chanceCalc.playerHasColor[1][this.chanceCalc.mapColorToColorIndex(trumpfColor)] 
+                            || this.chanceCalc.playerHasColor[3][this.chanceCalc.mapColorToColorIndex(trumpfColor)])) {
+                        trumpfColorCount += 1;
+                    }
+                }
+
+                // hat das gegner team potentiall noch trümpfe? => spiel "nicht wertvoll"
+                if (trumpfColorCount > 0) {
+                    var betterBockCardsToPlay = validCardsAssignments[colorToPlayIndex].cards.filter(
+                        function(c) {
+                            return ((c.number !== 14) && (c.number !== 10));
+                        }, this
+                    );
+
+                    if (betterBockCardsToPlay.length > 0) {
+                        cardToPlay = betterBockCardsToPlay[0];
+                    } else {
+                        cardToPlay = validCardsAssignments[colorToPlayIndex].cards[0];
+                    }
+                } 
+            }
+        } else {
+            // KEINE Böcke gefunden
+            // => wie bisher: "play highest"
+            var cardToPlay = currentNonTrumpfCards[0];
+            for (var cntc = 0; cntc < currentNonTrumpfCards.length; cntc++) {
+                if (this._cardPriority(currentNonTrumpfCards[cntc], currentNonTrumpfCards[cntc].color, this.gameType) > this._cardPriority(cardToPlay, currentNonTrumpfCards[cntc].color, this.gameType)) {
+                    cardToPlay = currentNonTrumpfCards[cntc];
+                }
+            }
+        }
+
+        return cardToPlay;
+    },
+    /**
      * Try and evaluate if the current Stich is already won considering
      * the cards that might be played by player :playerId
      */
     _checkCurrentStichOwnershipChance: function(validCards, tableCards, playerId) {
-        console.log('################################################\n################################################\n################################################\n'
-            + '\n alidCards: \t' + JSON.stringify(validCards) 
-            + '\n tableCards: \t' + JSON.stringify(tableCards) 
-            + '\n playerId: \t' + playerId);
-
         var highestCard = validCards[0];
         var leadColor = tableCards[0].color;
         var stichIsOurs = false;
@@ -391,11 +518,11 @@ let Brain = {
             }
         }
 
-        chanceForOtherPlayerToBeatMyCard = tmpChances;
+        var chanceForOtherPlayerToBeatMyCard = tmpChances;
     
         console.log('\t\t #### _checkCurrentStichOwnershipChance #### chance: ' + chanceForOtherPlayerToBeatMyCard);
 
-        // TODO: adjust chance according to points / time
+        // best result out of (5, 3, 0.67, 1, 0.5, 0.8)
         return (chanceForOtherPlayerToBeatMyCard > 0.67) ? false : true;
     },
     /**
@@ -407,17 +534,17 @@ let Brain = {
         let trumpfAss = Card.create(14, this._curTrumpfColor());
 
         if ((validCards.indexOf(trumpfNell) >= 0) && (validCards.indexOf(trumpfAss) >= 0)) {
-            console.log('\t\t #### _evaluateWhichTrumpfToPlay #### chance: ' + trumpfAss);
+            console.log('\t\t #### _evaluateWhichTrumpfToPlay ####: ' + trumpfAss);
             return trumpfAss;
         }
         // If you have both Buur + Ass, play Ass
         if ((validCards.indexOf(trumpfAss) >= 0) && (validCards.indexOf(trumpfBuur) >= 0)) {
-            console.log('\t\t #### _evaluateWhichTrumpfToPlay #### chance: ' + trumpfAss);
+            console.log('\t\t #### _evaluateWhichTrumpfToPlay ####: ' + trumpfAss);
             return trumpfAss;
         }
         // If you have both Buur + Nell, play Nell
         if ((validCards.indexOf(trumpfNell) >= 0) && (validCards.indexOf(trumpfBuur) >= 0)) {
-            console.log('\t\t #### _evaluateWhichTrumpfToPlay #### chance: ' + trumpfNell);
+            console.log('\t\t #### _evaluateWhichTrumpfToPlay ####: ' + trumpfNell);
             return trumpfNell;
         }
 
@@ -447,12 +574,12 @@ let Brain = {
         }
 
         if (trumpfCardsToEvaluate.indexOf(trumpfNell) >= 0) {
-            console.log('\t\t #### _evaluateWhichTrumpfToPlay #### chance: ' + trumpfNell);
+            console.log('\t\t #### _evaluateWhichTrumpfToPlay ####: ' + trumpfNell);
             return trumpfNell;
         }
 
         if (trumpfCardsToEvaluate.indexOf(trumpfAss) >= 0) {
-            console.log('\t\t #### _evaluateWhichTrumpfToPlay #### chance: ' + trumpfAss);
+            console.log('\t\t #### _evaluateWhichTrumpfToPlay ####: ' + trumpfAss);
             return trumpfAss;
         }
 
@@ -463,7 +590,7 @@ let Brain = {
             }
         }
 
-        console.log('\t\t #### _evaluateWhichTrumpfToPlay #### chance: ' + bestTrumpfToPlay);
+        console.log('\t\t #### _evaluateWhichTrumpfToPlay ####: ' + bestTrumpfToPlay);
         return bestTrumpfToPlay;
     },
     /**
@@ -481,7 +608,7 @@ let Brain = {
             }
         }
 
-        console.log('\t\t #### _playInvaluableCard #### playing:' + leastValuableCard + '\n of: \t' + JSON.stringify(validCards));
+        console.log('\t\t #### _playInvaluableCard #### playing:' + JSON.stringify(leastValuableCard) + '\n of: \t' + JSON.stringify(validCards));
 
         return leastValuableCard;
     },
@@ -500,7 +627,7 @@ let Brain = {
             }
         }
 
-        console.log('\t\t #### _playLogically #### playing card: ' + highestCard);
+        console.log('\t\t #### _playLogically #### playing card: ' + JSON.stringify(highestCard));
 
         return highestCard;
     },
