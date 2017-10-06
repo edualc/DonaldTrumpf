@@ -118,3 +118,4 @@ docker build . -t challenge_client # '.' is the directory of the repo
 docker run --name bot_js --link cs:cs -d  challenge_client
 ```
 
+## Usage
