@@ -118,4 +118,7 @@ docker build . -t challenge_client # '.' is the directory of the repo
 docker run --name bot_js --link cs:cs -d  challenge_client
 ```
 
-## Usage
+## Other relevant git repositories
+
+* [Challenge Server](https://github.com/webplatformz/challenge)
+* [Challenge JS Client (play random cards)](https://github.com/webplatformz/challenge-client-js)
